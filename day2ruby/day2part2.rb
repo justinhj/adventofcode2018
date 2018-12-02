@@ -1,9 +1,9 @@
 # Day 2 of Advent of Code 2018
 # https://adventofcode.com/2018/day/2
 
-require 'pry-byebug'
+#require 'pry-byebug'
 
-filename = ARGV.first || __dir__ + 'input.txt'
+filename = ARGV.first || __dir__ + '/input.txt'
 
 file = File.open(filename, 'rb')
 contents = file.read

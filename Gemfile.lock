@@ -13,6 +13,9 @@ GEM
     pry (0.12.2)
       coderay (~> 1.1.0)
       method_source (~> 0.9.0)
+    pry-doc (0.13.5)
+      pry (~> 0.11)
+      yard (~> 0.9.11)
     rainbow (3.0.0)
     rubocop (0.60.0)
       jaro_winkler (~> 1.5.1)
@@ -24,13 +27,16 @@ GEM
       unicode-display_width (~> 1.4.0)
     ruby-progressbar (1.10.0)
     unicode-display_width (1.4.0)
+    yard (0.9.16)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   byebug
+  method_source
   pry
+  pry-doc
   rubocop
 
 BUNDLED WITH

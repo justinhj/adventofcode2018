@@ -3,16 +3,13 @@
 
 # require 'pry-byebug'
 
-filename = ARGV.first || __dir__ + 'input.txt'
+filename = ARGV.first || __dir__ + '/input.txt'
 
 file = File.open(filename, 'rb')
 contents = file.read
 lines = contents.split("\n")
 
-# For each letter in a string return a map of letter to freq
-# Returns a tuple of Boolean, the first tells you if the
-# string has two of any char and the second three of any char
-def check_twos_and_threes(str)
+def count_twos_and_threes(str)
   sa = str.scan(/\w/)
 
   groups = sa.group_by { |c| c }.values
@@ -24,7 +21,7 @@ def check_twos_and_threes(str)
 end
 
 counts = lines.reduce([0, 0]) do |acc, line|
-  twos, threes = check_twos_and_threes(line)
+  twos, threes = count_twos_and_threes(line)
 
   acc[0] = acc[0] + twos
   acc[1] = acc[1] + threes
