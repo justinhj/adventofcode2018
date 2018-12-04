@@ -12,7 +12,7 @@ lines = contents.split("\n")
 class Claim
   def initialize(str)
     id,x,y,w,h =
-             /#([0-9]+) @ ([0-9]+),([0-9])+: ([0-9]+)x([0-9]+)/.match(str).captures
+             /#([0-9]+) @ ([0-9]+),([0-9]+): ([0-9]+)x([0-9]+)/.match(str).captures
 
     @id = id.to_i
     @x = x.to_i
@@ -39,28 +39,28 @@ end
 
 class Grid
   def initialize(size)
-    @grid = Array.new(size, Array.new(size, 0))
+    @grid = Hash.new(0)
     @size = size
   end
 
+  def xy_to_key(x,y)
+    "#{x},#{y}"
+  end
+  
   def getClaimCount(x,y)
-    if @grid[x][y] == nil
-      byebug
-    end
-    
-    @grid[x][y]
+    @grid[xy_to_key(x,y)]
   end
 
   def incClaimCount(x,y)
-    @grid[x][y] = @grid[x][y] + 1
+    @grid[xy_to_key(x,y)] = @grid[xy_to_key(x,y)] + 1
   end
 
   def countClaims()
     lx = 0
-    ly = 0
     count = 0
     
     while lx < @size do
+      ly = 0
       while ly < @size do
         this_count = getClaimCount(lx,ly)
         if this_count >= 2
@@ -85,7 +85,7 @@ class Grid
     while ly < @size do
       lx = 0
       while lx < @size do
-        print @grid[lx][ly]
+        print @grid[xy_to_key(lx,ly)]
         print ' '
         lx += 1
       end
@@ -97,31 +97,35 @@ class Grid
   def claimRect(claim)
     x,y = claim.xy
     w,h = claim.wh
-    
-    lx = x
 
-    while lx <= (x + w + 1) do
-      ly = y
-      while ly <= (y + h + 1) do
+    ly = y
+
+    while ly <= (y + h - 1) do
+      lx = x
+      while lx <= (x + w - 1) do
         incClaimCount(lx,ly)
-        ly += 1
+        lx += 1
       end
       
-      lx += 1      
+      ly += 1      
     end
     
   end
   
 end
 
-g = Grid.new(10)
-  
+g = Grid.new(1000)
+
+count = 0
+
 lines.each do |line|
   claim = Claim.new(line)
 
   g.claimRect(claim)
+
+  # print "claim #{claim.id} #{claim.xy} #{claim.wh}\n"
   
 end
 
 puts g.countClaims()
-g.draw
+
