@@ -1,5 +1,7 @@
 # Day 2 of Advent of Code 2018
-# https://adventofcode.com/2018/day/2
+# https://adventofcode.com/2018/day/2 part 2
+
+# Find a non-overlapping claim
 
 require 'pry-byebug'
 
@@ -111,19 +113,54 @@ class Grid
     end
     
   end
+
+  def checkRectAll1(claim)
+    x,y = claim.xy
+    w,h = claim.wh
+
+    ly = y
+
+    while ly <= (y + h - 1) do
+      lx = x
+      while lx <= (x + w - 1) do
+        if getClaimCount(lx,ly) != 1
+          return false
+        end
+        lx += 1
+      end
+      
+      ly += 1      
+    end
+
+    return true
+  end
   
 end
 
 g = Grid.new(1000)
+
+# First populate the grid
 
 lines.each do |line|
   claim = Claim.new(line)
 
   g.claimRect(claim)
 
-  # print "claim #{claim.id} #{claim.xy} #{claim.wh}\n"
-  
 end
 
-puts g.countClaims()
+# Now do the same again but this time we want to simply
+# check if a rect is entirely non-overlapping
+# Each inch is 1
+
+lines.each do |line|
+  claim = Claim.new(line)
+
+  if g.checkRectAll1(claim) == true
+    puts claim.id
+    break
+  end
+
+end
+
+
 
