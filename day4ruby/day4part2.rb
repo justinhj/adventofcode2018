@@ -57,54 +57,31 @@ events = lines.map{ |line| Event.new(line) }
 
 sorted_events = events.sort_by { |event| event.date }
 
-# Run through all the events tracking guard sleep patterns to find the sleepiest
+# Now we need to populate all the guards sleep at each individual minute
 
-guard_sleep = Hash.new(0)
-current_guard = nil
-sleep_start = 0
-
-sorted_events.each do |event|
-  pretty = event.date.strftime('%Y-%m-%d %H:%M')
-  #print("#{pretty} event #{event.event}\n")
-
-  case event.event
-  when :wake
-    minute = event.date.minute
-    sleep_time = minute - sleep_start
-    guard_sleep[current_guard] += sleep_time
-  when :sleep
-    sleep_start = event.date.minute
-  else
-    current_guard = event.event
-  end
-  
-end
-
-# Most sleep?
-
-sleepy_guard, slept = guard_sleep.max_by{|g,s| s}
-
-print "Guard ##{sleepy_guard} slept the most (#{slept} minutes)\n" 
-
-# Now we need to populate the guards sleep at each individual minute
-# A similar loop to above
-
-# Tracks times slept at each individual minute
-guard_sleep_minutes = Hash.new(0)
+# Tracks times slept at each individual minute 
+guards_sleep_minutes = Hash.new()
+# this is a hash of hashes, so guard id to another hash of minutes to times slept
 
 sleep_start = 0
 current_guard = nil
 
 sorted_events.each do |event|
-  #pretty = event.date.strftime('%Y-%m-%d %H:%M')
-  # print("#{pretty} event #{event.event}\n")
 
   case event.event
   when :wake
     minute = event.date.minute
-    if current_guard == sleepy_guard
-      (sleep_start..minute).each{ |m| guard_sleep_minutes[m] += 1 }
+
+    if guards_sleep_minutes.include? current_guard
+      guards_minutes = guards_sleep_minutes[current_guard]      
+    else
+      guards_minutes = Hash.new(0)
     end
+
+    (sleep_start..minute).each{ |m| guards_minutes[m] += 1 }
+
+    guards_sleep_minutes[current_guard] = guards_minutes
+
   when :sleep
     sleep_start = event.date.minute
   else
@@ -113,10 +90,17 @@ sorted_events.each do |event|
   
 end
 
-sleepiest_minute, times_slept_at_sleepiest_minute = guard_sleep_minutes.max_by { |k,v| v }
+# Now create a map of guard id to most popular sleep minute
 
-print "sleepiest minute #{sleepiest_minute} slept #{times_slept_at_sleepiest_minute} times\n"
+guards_to_minute = Hash.new(0)
 
-answer = sleepiest_minute * sleepy_guard.to_i
+guards_sleep_minutes.each { | g, mins |
+  fave_minute = mins.max_by { |k,v| v }[0]
+  print "guard #{g} fave min #{fave_minute}\n"
+  guards_to_minute[g] = fave_minute
+}
 
-print "Answer #{answer}\n"
+guard, minute = guards_to_minute.max_by { |g,m| m }
+answer = guard.to_i * minute
+
+print "Answer is Guard ##{guard} at minute #{minute} : #{answer}\n"
