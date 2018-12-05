@@ -71,36 +71,47 @@ sorted_events.each do |event|
   case event.event
   when :wake
     minute = event.date.minute
+    #print "Wake at #{minute}\n"
 
     if guards_sleep_minutes.include? current_guard
+      #puts "get #{current_guard}"
       guards_minutes = guards_sleep_minutes[current_guard]      
     else
+      #puts "new #{current_guard}"
       guards_minutes = Hash.new(0)
     end
 
-    (sleep_start..minute).each{ |m| guards_minutes[m] += 1 }
+    (sleep_start...minute).each{ |m| guards_minutes[m] += 1 }
 
     guards_sleep_minutes[current_guard] = guards_minutes
 
   when :sleep
     sleep_start = event.date.minute
+    #print "Sleep at #{sleep_start}\n"
+
   else
+    puts event.event
     current_guard = event.event
+    sleep_start = 0
   end
   
 end
 
 # Now create a map of guard id to most popular sleep minute
 
-guards_to_minute = Hash.new(0)
+guards_to_minute_times = Hash.new(0)
 
 guards_sleep_minutes.each { | g, mins |
-  fave_minute = mins.max_by { |k,v| v }[0]
-  print "guard #{g} fave min #{fave_minute}\n"
-  guards_to_minute[g] = fave_minute
+  mins = mins.sort_by { |k,v| k }
+  fave_minute, times = mins.max_by { |k,v| v }
+
+  # print "guard #{g} fave min #{fave_minute} times #{times}\n"
+  guards_to_minute_times[g] = [fave_minute, times]
 }
 
-guard, minute = guards_to_minute.max_by { |g,m| m }
-answer = guard.to_i * minute
+guard, minute_times = guards_to_minute_times.max_by { |g,m| m[1] }
 
-print "Answer is Guard ##{guard} at minute #{minute} : #{answer}\n"
+fave_minute, times = minute_times
+answer = guard.to_i * fave_minute
+
+print "Answer is Guard ##{guard} at minute #{fave_minute} : #{answer}\n"
