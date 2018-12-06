@@ -7,13 +7,6 @@ import (
 	"strings"
 )
 
-func Abs(x uint8) uint8 {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
 func check(e error) {
 	if e != nil {
 		panic(e)
@@ -95,7 +88,7 @@ func main() {
 	dat, err := ioutil.ReadFile(filename)
 	check(err)
 
-	input := string(dat)
+	input := strings.TrimSpace(string(dat))
 
 	//fmt.Printf("Input %s %d\n\n", input, len(input))
 	fmt.Printf("Input length %d\n", len(input))

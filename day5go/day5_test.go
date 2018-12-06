@@ -51,3 +51,43 @@ func TestCascade(t *testing.T) {
 		t.Errorf("Got: %s, want: %s.", output, expect)
 	}
 }
+
+func TestXCascade(t *testing.T) {
+	fmt.Printf("test6\n")
+	input := "XZyXwVuTsRqPoNmLkJiHgFEdcBAabCDefGhIjKlMnOpQrStUvWxYz"
+	output := processUntilDone(input)
+	expect := "X"
+	if output != expect {
+		t.Errorf("Got: %s, want: %s.", output, expect)
+	}
+}
+
+func TestCascadeX(t *testing.T) {
+	fmt.Printf("test7\n")
+	input := "ZyXwVuTsRqPoNmLkJiHgFEdcBAabCDefGhIjKlMnOpQrStUvWxYzX"
+	output := processUntilDone(input)
+	expect := "X"
+	if output != expect {
+		t.Errorf("Got: %s, want: %s.", output, expect)
+	}
+}
+
+func TestEnd(t *testing.T) {
+	fmt.Printf("test8\n")
+	input := "ababababababaACca"
+	output := processUntilDone(input)
+	expect := "ababababababa"
+	if output != expect {
+		t.Errorf("Got: %s, want: %s.", output, expect)
+	}
+}
+
+func TestBegin(t *testing.T) {
+	fmt.Printf("test9\n")
+	input := "ACcaababababababa"
+	output := processUntilDone(input)
+	expect := "ababababababa"
+	if output != expect {
+		t.Errorf("Got: %s, want: %s.", output, expect)
+	}
+}
