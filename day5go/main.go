@@ -97,4 +97,17 @@ func main() {
 
 	fmt.Printf("\nOutput length %d\n", len(output))
 
+	// Part 2... remove each letter and find the shortest polymer
+
+	for remove := 'A'; remove <= 'Z'; remove++ {
+
+		noLower := strings.Replace(input, string(remove), "", -1)
+
+		noUpper := strings.Replace(noLower, string(remove+32), "", -1)
+
+		out := processUntilDone(noUpper)
+
+		fmt.Printf("\nOutput length without letter %c is %d\n", remove, len(out))
+	}
+
 }
