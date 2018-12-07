@@ -1,3 +1,5 @@
+require 'set'
+
 require 'pry-byebug'
 
 filename = ARGV.first || __dir__ + '/input.txt'
@@ -25,7 +27,7 @@ coords = []
 lines.each_with_index do |line, id|
   c = Coord.new(id, line)
   coords << c
-  print "#{id} (#{c.x}, #{c.y})\n"
+  # print "#{id} (#{c.x}, #{c.y})\n"
 end
 
 # Find the minimum and maximum extents of the area
@@ -66,7 +68,7 @@ view = {}
 (min_x..max_x).each do |x|
   (min_y..max_y).each do |y|
     nearest = -1
-    view["#{x}_#{y}"] = find_nearest(x,y,coords)
+    view[[x,y]] = find_nearest(x,y,coords)
   end
 end
 
@@ -77,6 +79,24 @@ location_counts = Hash.new(0)
 view.values.each do |location|
   location_counts[location] += 1
 end
+
+# All that remains is to find the ones that are infinite
+# Which means one of their coords is at the limits of the view
+
+infinite_locations = Set[]
+
+view.each do |coord, id|
+  if coord[0] == min_x || coord[0] == max_x || coord[1] == min_y || coord[1] == max_y
+    infinite_locations << id
+  end
+end
+
+# Remove these from the location_counts and sort by number of locations
+
+location_counts = location_counts.delete_if { |location, count| infinite_locations.include?(location) }
+
+location = location_counts.max_by { |location, count| count }
+print "#{location[0]}, #{location[1]}\n"
 
 
 
