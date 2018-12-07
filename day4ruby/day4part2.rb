@@ -15,7 +15,7 @@
 # Then multiply those together
 
 require 'date'
-require 'pry-byebug'
+# require 'pry-byebug'
 
 filename = ARGV.first || __dir__ + '/input.txt'
 
@@ -39,9 +39,7 @@ class Event
     @date = DateTime.parse(raw_date)
   end
 
-  attr_accessor :date
-  attr_accessor :event
-
+  attr_accessor :date, :event
   
 end
 
