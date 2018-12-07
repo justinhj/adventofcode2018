@@ -97,9 +97,3 @@ location_counts = location_counts.delete_if { |location, count| infinite_locatio
 
 location = location_counts.max_by { |location, count| count }
 print "#{location[0]}, #{location[1]}\n"
-
-
-
-
-
-
