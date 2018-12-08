@@ -27,7 +27,7 @@ func reactsWith(a uint8, b uint8) bool {
 
 }
 
-const MinSizeForProcess int = 1000
+const MinSizeForProcess int = 10000
 
 type result struct {
 	output  string
