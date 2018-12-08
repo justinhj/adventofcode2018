@@ -5,17 +5,19 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	//	"sync"
 )
 
 func check(e error) {
 	if e != nil {
 		panic(e)
 	}
+
 }
 
 func reactsWith(a uint8, b uint8) bool {
 
-	//	fmt.Printf("Compare %c with %c\n", a, b)
+	//fmt.Printf("Compare %c with %c\n", a, b)
 
 	if a > b {
 		return a-b == 32
@@ -25,53 +27,109 @@ func reactsWith(a uint8, b uint8) bool {
 
 }
 
-func processReactions(inputStr string) (string, bool) {
+const MinSizeForProcess int = 1000
 
-	var b strings.Builder
-	var l = len(inputStr)
+type result struct {
+	output  string
+	changed bool
+}
 
-	skip := false
-	changed := false
+func processReactions(inputStr string, response chan result) result {
 
-	for i := 0; i < l; i++ {
+	l := len(inputStr)
 
-		if skip == false {
-			//fmt.Printf("i %d l %d\n", i, l)
-			if i <= (l - 2) {
-				// if there's no reaction write the char to the output string
-				if !reactsWith(inputStr[i], inputStr[i+1]) {
-					b.WriteByte(inputStr[i])
-					//fmt.Printf("Output %s\n", b.String())
-				} else {
-					//fmt.Printf("Skipping %c %c because they react\n", inputStr[i], inputStr[i+1])
-					// when there is a reaction skip this char and the next one
-					skip = true
-					changed = true
+	if l > MinSizeForProcess {
+
+		left := make(chan result)
+		right := make(chan result)
+
+		go processReactions(inputStr[0:l/2], left)
+		go processReactions(inputStr[l/2:l], right)
+
+		var leftResult result = result{"", false}
+		var rightResult result = result{"", false}
+
+	Out:
+		for {
+			select {
+			case l := <-left:
+				//fmt.Printf("received output on chan %v %s\n", left, l.output)
+				leftResult = l
+				if len(rightResult.output) > 0 {
+					break Out
 				}
-			} else {
-				b.WriteByte(inputStr[i])
+			case r := <-right:
+				//fmt.Printf("received output on chan %v %s\n", right, r.output)
+				rightResult = r
+				if len(leftResult.output) > 0 {
+					break Out
+				}
 			}
-		} else {
-			skip = false
 		}
 
+		res := result{leftResult.output + rightResult.output, leftResult.changed || rightResult.changed}
+
+		if response != nil {
+			response <- res
+			close(response)
+		}
+
+		return res
+
+	} else {
+
+		var b strings.Builder
+
+		skip := false
+		changed := false
+
+		for i := 0; i < l; i++ {
+
+			if skip == false {
+				//fmt.Printf("i %d l %d\n", i, l)
+				if i <= (l - 2) {
+					// if there's no reaction write the char to the output string
+					if !reactsWith(inputStr[i], inputStr[i+1]) {
+						b.WriteByte(inputStr[i])
+						//fmt.Printf("Output %s\n", b.String())
+					} else {
+						//fmt.Printf("Skipping %c %c because they react\n", inputStr[i], inputStr[i+1])
+						// when there is a reaction skip this char and the next one
+						skip = true
+						changed = true
+					}
+				} else {
+					b.WriteByte(inputStr[i])
+				}
+			} else {
+				skip = false
+			}
+
+		}
+
+		if response != nil {
+			//fmt.Printf("Chan %v send output %d changed %t\n", response, len(b.String()), changed)
+			response <- result{b.String(), changed}
+			close(response)
+		}
+
+		//fmt.Printf("return output. changed %t\n", changed)
+		return result{b.String(), changed}
 	}
-
-	//fmt.Printf("return output %s changed %t\n", b.String(), changed)
-
-	return b.String(), changed
 }
 
 func processUntilDone(input string) string {
-	output, changed := processReactions(input)
+	res := processReactions(input, nil)
 
-	for changed == true {
+	//fmt.Printf("Output %s Changed %t\n", res.output, res.changed)
+
+	for res.changed == true {
 		fmt.Print(".")
-		output, changed = processReactions(output)
+		res = processReactions(res.output, nil)
 		//	fmt.Printf("Output %s Changed %t\n", output, changed)
 	}
 
-	return output
+	return res.output
 }
 
 func main() {
