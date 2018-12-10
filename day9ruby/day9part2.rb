@@ -16,7 +16,7 @@ inputs = []
 lines.each do |line| 
   num_players, last_marble_score = /([0-9]+) players; last marble is worth ([0-9]+) points/.match(line).captures
 
-  parsed = {num_players: num_players.to_i, last_marble_score: last_marble_score.to_i}
+  parsed = {num_players: num_players.to_i, last_marble_score: last_marble_score.to_i * 100}
 
   puts parsed
   
@@ -34,7 +34,7 @@ def insert_marble(turn, board)
     board[:next][:previous] = board[:previous]
     marble = board[:value]
     score = turn + marble
-    board = board[:previous]
+    board = board[:next]
   else
     board = board_skip(board, 1)
     new_board = {previous: board, next: board[:next], value: turn}
@@ -96,11 +96,11 @@ def solve(input)
       # print "turn #{turn} player #{player} points #{points}\n"
     end
     
-    print_board(board)
+    #print_board(board)
     
     turn += 1
 
-    print "Turn #{turn} #{Time.new.inspect}\n" # if turn % 500000 == 0
+    print "Turn #{turn} #{Time.new.inspect}\n" if turn % 500000 == 0
     
     break if turn == input[:last_marble_score]
     
