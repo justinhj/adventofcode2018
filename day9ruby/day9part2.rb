@@ -16,7 +16,7 @@ inputs = []
 lines.each do |line| 
   num_players, last_marble_score = /([0-9]+) players; last marble is worth ([0-9]+) points/.match(line).captures
 
-  parsed = {num_players: num_players.to_i, last_marble_score: last_marble_score.to_i * 100}
+  parsed = {num_players: num_players.to_i, last_marble_score: last_marble_score.to_i}
 
   puts parsed
   
@@ -25,8 +25,10 @@ end
 
 # return new pos and any player points
 def insert_marble(turn, board)
-  
+
+  score = 0
   if turn % 23 == 0
+#    binding.pry
     board = board_skip(board, -7)
     board[:previous][:next] = board[:next]
     board[:next][:previous] = board[:previous]
@@ -35,7 +37,7 @@ def insert_marble(turn, board)
     board = board[:previous]
   else
     board = board_skip(board, 1)
-    new_board = {previous: nil, next: nil, value: turn}
+    new_board = {previous: board, next: board[:next], value: turn}
     board[:next][:previous] = new_board
     board[:next] = new_board
     board = new_board
@@ -45,20 +47,22 @@ def insert_marble(turn, board)
   return board, score
 end
 
-def print_board(board, cp)
-  board.each_with_index do |b, i|
-    if i == cp
-      print "(#{b}) "
-    else
-      print "#{b} "
-    end    
-  end
+# Assumes board has no repeated values or lol
+def print_board(board)
+  stop_value = board[:value]
+  print "(#{board[:value]}) "
+  
+  b = board[:next]
+  while b[:value] != stop_value
+    print "#{b[:value]} "
+    b = b[:next]
+  end    
   print "\n"
 end
 
 def board_skip(board, skip)
   if skip < 0
-    (0...skip).each do |_|
+    (0...-skip).each do |_|
       board = board[:previous]
     end
   else
@@ -76,13 +80,13 @@ def solve(input)
   board[:previous] = board
   board[:next] = board
 
-binding.pry
-  
   player_scores = Hash.new(0)
   turn = 1
 
-#  print_board(board, current_pos)
+ # print_board(board)
 
+#binding.pry
+  
   (1..input[:num_players]).cycle.each do |player|
 
     board, points = insert_marble(turn, board)
@@ -92,14 +96,12 @@ binding.pry
       # print "turn #{turn} player #{player} points #{points}\n"
     end
     
-    #print_board(board, current_pos)
+    print_board(board)
     
     turn += 1
 
-    print "Turn #{turn} #{Time.new.inspect}\n" if turn % 500000 == 0
+    print "Turn #{turn} #{Time.new.inspect}\n" # if turn % 500000 == 0
     
-    #break if points == input[:last_marble_score]
-    #break if turn == 26
     break if turn == input[:last_marble_score]
     
   end
