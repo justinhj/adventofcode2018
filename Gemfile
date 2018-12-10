@@ -6,3 +6,5 @@ gem 'pry-doc'
 gem 'method_source'
 gem 'byebug'
 gem 'rubocop'
+
+gem 'chunky_png'
