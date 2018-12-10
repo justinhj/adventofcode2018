@@ -56,6 +56,12 @@ def draw_message(dudes)
   min_y = dudes.min_by { |dude| dude[:y] }[:y]
   max_y = dudes.max_by { |dude| dude[:y] }[:y]
 
+  x_range = (max_x - min_x).abs
+  y_range = (max_y - min_y).abs
+  
+  width = 100.0
+  height = 30.0
+  
   (min_y..max_y).each do |y|
 
     points_on_row = dudes.select { |dude| dude[:y] == y }
@@ -86,8 +92,9 @@ end
 count = 0
 
 loop do
-  
-  png_message(dudes, count)
+
+  draw_message(dudes)
+#  png_message(dudes, count)
 
   k = STDIN.getch
 
