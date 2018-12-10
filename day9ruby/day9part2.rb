@@ -1,6 +1,6 @@
-# same as part 1 but with linked list for board
+# same as part 1 but with linked list for board, takes runtime from 2 hours to 17 seconds
 
-require 'pry-byebug'
+# require 'pry-byebug'
 
 filename = ARGV.first || __dir__ + '/input.txt'
 
@@ -15,11 +15,8 @@ inputs = []
 
 lines.each do |line| 
   num_players, last_marble_score = /([0-9]+) players; last marble is worth ([0-9]+) points/.match(line).captures
-
   parsed = {num_players: num_players.to_i, last_marble_score: last_marble_score.to_i * 100}
-
   puts parsed
-  
   inputs << parsed
 end
 
@@ -28,7 +25,6 @@ def insert_marble(turn, board)
 
   score = 0
   if turn % 23 == 0
-#    binding.pry
     board = board_skip(board, -7)
     board[:previous][:next] = board[:next]
     board[:next][:previous] = board[:previous]
@@ -83,10 +79,6 @@ def solve(input)
   player_scores = Hash.new(0)
   turn = 1
 
- # print_board(board)
-
-#binding.pry
-  
   (1..input[:num_players]).cycle.each do |player|
 
     board, points = insert_marble(turn, board)
@@ -99,13 +91,12 @@ def solve(input)
     #print_board(board)
     
     turn += 1
-
     print "Turn #{turn} #{Time.new.inspect}\n" if turn % 500000 == 0
     
     break if turn == input[:last_marble_score]
     
   end
-  #binding.pry
+
   player_scores = player_scores.sort_by {|k,v| v}.reverse
   print "scores #{player_scores}\n"
   
@@ -115,7 +106,8 @@ inputs.each do |input|
   answer = solve(input)
 end
 
-
+# Part 2 3689913905
+# Runtime 17 seconds
 
 
 
