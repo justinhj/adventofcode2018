@@ -4,6 +4,10 @@ require 'pry-byebug'
 require 'io/console'
 require 'chunky_png'
 
+# Note I was going to draw a png file because the points were so large
+# but then it occured to me to just run until they were close together
+# and then draw it. I've left the PNG code in here for future utility
+
 filename = ARGV.first || __dir__ + '/input.txt'
 
 file = File.open(filename, 'rb')
@@ -80,7 +84,7 @@ end
 
 def move(dudes)
 
-  dudes = dudes.map do |dude|
+  dudes.map do |dude|
 
     dude[:x] += dude[:dx]
     dude[:y] += dude[:dy]
@@ -89,25 +93,75 @@ def move(dudes)
   
 end
 
+def delta(dudes)
+
+  iteration = 1
+  min_delta = 9223372036854775807
+  
+  dudes.each do |dude|
+    move(dudes)
+
+    delta = dudes.inject(0) { |acc, dude| acc += dude[:x]**2 + dude[:y]**2 }
+
+    min_delta = delta unless delta > min_delta
+
+    print "step #{iteration} delta #{delta}\n"
+
+    k = STDIN.getch
+    
+    if k == 'q'
+      break
+    end
+
+    iteration += 1
+  end
+  
+end
+
+#delta(dudes)
+
 count = 0
+min_delta = 9223372036854775807
+min_delta_step = 0
 
 loop do
 
-  draw_message(dudes)
-#  png_message(dudes, count)
-
-  k = STDIN.getch
-
-  if k == 'q'
+  # Note I ran this first to find the minimum
+  # point and then just started drawing from there...
+  if count == 10124
+    draw_message(dudes)
     break
   end
+  
+  delta = dudes.inject(0) { |acc, dude| acc += dude[:x]**2 + dude[:y]**2 }
+
+  if delta > min_delta
+    if count == min_delta_step + 1
+      print "min step #{count - 1}\n"
+    end
+  else
+    min_delta = delta
+    min_delta_step = count
+  end
+
+  print "step #{count} delta #{delta}\n"
   
   move(dudes)
 
   count += 1
 end
 
-
+# Solution:
+# #....#..######...####...#....#..#####...#####...######..#####.
+# #....#..#.......#....#..#....#..#....#..#....#.......#..#....#
+# .#..#...#.......#........#..#...#....#..#....#.......#..#....#
+# .#..#...#.......#........#..#...#....#..#....#......#...#....#
+# ..##....#####...#.........##....#####...#####......#....#####.
+# ..##....#.......#.........##....#....#..#.........#.....#....#
+# .#..#...#.......#........#..#...#....#..#........#......#....#
+# .#..#...#.......#........#..#...#....#..#.......#.......#....#
+# #....#..#.......#....#..#....#..#....#..#.......#.......#....#
+# #....#..######...####...#....#..#####...#.......######..#####.
 
 
 
