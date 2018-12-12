@@ -1,4 +1,4 @@
-
+require 'pry-byebug'
 
 # Find the fuel cell's rack ID, which is its X coordinate plus 10.
 # Begin with a power level of the rack ID times the Y coordinate.
@@ -59,8 +59,24 @@ def find_best(grid)
   
 end
 
+def print_grid(grid, limit)
+  (1..limit).each do |y|
+    (1..limit).each do |x|
+#      binding.pry
+      if grid[[x,y]] < 0
+        print "#{grid[[x,y]]} "
+      else
+        print " #{grid[[x,y]]} "
+      end
+    end
+    print "\n"
+  end
+end
+
 grid = make_grid(5719)
 find_best(grid)
+
+print_grid(grid, 30)
 
 
 
