@@ -110,19 +110,16 @@ describe "Sat Is correct with uniform array" do
   
   specify { expect(subject).to eql([1,1,10]) }
   
-  specify { draw_sat(grid_sat, 10) }
-
-  specify { pp subject }
-
 end
 
-# For grid serial number 18, the largest total square (with a total power of 113) is 16x16 and has a top-left corner of 90,269, so its identifier is 90,269,16.
+# For grid serial number 18, the largest total square (with a total power of 113)
+# is 16x16 and has a top-left corner of 90,269, so its identifier is 90,269,16.
 describe "Test 1" do
 
   let(:grid) {
     make_grid(18)
   }
-  
+
   let(:grid_sat) { summed_area_table(grid, 300) }
 
   subject { find_best(grid_sat, 300) }
@@ -131,9 +128,21 @@ describe "Test 1" do
   
 end
 
+# For grid serial number 42, the largest total square (with a total power of 119)
+# is 12x12 and has a top-left corner of 232,251, so its identifier is 232,251,12.
+describe "Test 2" do
 
+  let(:grid) {
+    make_grid(42)
+  }
 
-# For grid serial number 42, the largest total square (with a total power of 119) is 12x12 and has a top-left corner of 232,251, so its identifier is 232,251,12.
+  let(:grid_sat) { summed_area_table(grid, 300) }
+
+  subject { find_best(grid_sat, 300) }
+
+  specify { expect(subject).to eql([232,251,12]) }
+  
+end
 
 
 

@@ -26,16 +26,6 @@ def power_level(x,y,serial)
   pl -= 5
 end
 
-# puts power_level(3,5,8)
-
-# Fuel cell at  122,79, grid serial number 57: power level -5.
-# Fuel cell at 217,196, grid serial number 39: power level  0.
-# Fuel cell at 101,153, grid serial number 71: power level  4
-
-# puts power_level(122,79,57)
-# puts power_level(217,196,39)
-# puts power_level(101,153,71)
-
 def make_grid(serial)
   grid = Hash.new(0)
   (1..300).each do |y|
@@ -55,7 +45,10 @@ def find_best_size(sat, x, y, width)
   best_size = -1
   size = 1
 
-  while x + size <= width + 1 do
+  #  while x + size <= width + 1 do
+  while x + size <= width + 1 &&
+        y + size <= width + 1 &&
+        size < 20 do
 
 #    print "try size x #{x} #{size} - 1 (#{x + size - 1})\n"
     
@@ -87,7 +80,7 @@ def find_best(sat, width)
       sum, size = find_best_size(sat, x, y, width)
       
       if sum > best
-        print "\nnew best #{sum} coord #{x},#{y} size #{size}\n"
+        #print "\nnew best #{sum} coord #{x},#{y} size #{size}\n"
         best = sum
         best_coord = [x,y]
         best_size = size
@@ -95,7 +88,7 @@ def find_best(sat, width)
     end
   end
   
-  print "best #{best} at #{best_coord}\n"
+  #print "best #{best} at #{best_coord}\n"
   [best_coord[0], best_coord[1], best_size]
   
 end
@@ -168,11 +161,7 @@ def grid_array_to_hash(grid)
   grid_h
 end
 
-#grid = make_grid(5719)
-#sat_large = summed_area_table(grid, 300)
-#find_best(sat_large, 300)
-
-# best 39405 at [1, 295]
-# best 38826 at [1, 295]
-# new best 39974 coord 1,300 size 298
-# best 39974 at [1, 300]
+grid = make_grid(5719)
+sat_large = summed_area_table(grid, 300)
+x,y,best = find_best(sat_large, 300)
+print "Solution is #{x},#{y},#{best}\n"
