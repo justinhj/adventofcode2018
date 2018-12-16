@@ -1,6 +1,11 @@
 require 'pry-byebug'
 require 'chunky_png'
 
+# The following data structure is put to work in this solution
+# to speed up the problem of finding sums of all sizes of
+# rectangles:
+# https://en.wikipedia.org/wiki/Summed-area_table
+
 # Find the fuel cell's rack ID, which is its X coordinate plus 10.
 # Begin with a power level of the rack ID times the Y coordinate.
 # Increase the power level by the value of the grid serial number (your puzzle input).
@@ -40,15 +45,15 @@ def make_grid(serial)
 end
 
 # return best score and the best size
-def find_best_size(sat, x, y)
+def find_best_size(sat, x, y, width)
 
-#  print "Analyze #{x},#{y}\n"
+  #print "Analyze #{x},#{y}\n"
   
   best = -1000
   best_size = -1
   size = 1
 
-  while x + size < 300 do
+  while x + size < width do
     
     sum = sat_sum(sat, x, y, x + size - 1, y + size - 1)
     
@@ -66,15 +71,16 @@ def find_best_size(sat, x, y)
   
 end
 
-def find_best(sat)
+def find_best(sat, width)
+  
   best = -1000
   best_coord = [0,0]
   best_size = -1
   
-  (1..300).each do |y|
-    (1..300).each do |x|
+  (1..width).each do |y|
+    (1..width).each do |x|
 
-      sum, size = find_best_size(sat, x, y)
+      sum, size = find_best_size(sat, x, y, width)
       
       if sum > best
         print "\nnew best #{sum} coord #{x},#{y} size #{size}\n"
@@ -86,6 +92,7 @@ def find_best(sat)
   end
   
   print "best #{best} at #{best_coord}\n"
+  [best_coord[0], best_coord[1], best_size]
   
 end
 
@@ -110,24 +117,13 @@ end
 
 grid = make_grid(5719)
 
-test_grid = {
-  [1,1] => 31, [2,1] => 2, [3,1] => 4, [4,1] => 33, [5,1] => 5, [6,1] => 36,
-  [1,2] => 12, [2,2] => 26, [3,2] => 9, [4,2] => 10, [5,2] => 29, [6,2] => 25,
-  [1,3] => 13, [2,3] => 17, [3,3] => 21, [4,3] => 22, [5,3] => 20, [6,3] => 18,
-  [1,4] => 24, [2,4] => 23, [3,4] => 15, [4,4] => 16, [5,4] => 14, [6,4] => 19,
-  [1,5] => 30, [2,5] => 8, [3,5] => 28, [4,5] => 27, [5,5] => 11, [6,5] => 7,
-  [1,6] => 1, [2,6] => 35, [3,6] => 34, [4,6] => 3, [5,6] => 32, [6,6] => 6 }
+#sat_small = summed_area_table(test_grid, 6)
 
-test_grid.default = 0
-
-sat_small = summed_area_table(test_grid, 6)
-
-draw_small = false
-
-if draw_small
-  (1..6).each do |y|
-    (1..6).each do |x|
-      print "#{sat_small[[x,y]]} "
+def draw_sat(sat, width)
+  print "\n"
+  (1..width).each do |y|
+    (1..width).each do |x|
+      printf("%4d ", sat[[x,y]])
     end
     print "\n"
   end
@@ -160,9 +156,20 @@ def png_grid(grid)
   
 end
 
-png_grid(grid)
+# png_grid(grid)
 
-# find_best(sat_large)
+def grid_array_to_hash(grid)
+  grid_h = Hash.new(0)
+
+  grid.each_with_index do |row,rindex|
+    row.each_with_index do |col,cindex|
+      grid_h[[cindex + 1,rindex + 1]] = col 
+    end
+  end
+  grid_h
+end
+
+# find_best(sat_large, 300)
 
 # best 39405 at [1, 295]
 # best 38826 at [1, 295]
