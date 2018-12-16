@@ -5,6 +5,8 @@ require 'chunky_png'
 # to speed up the problem of finding sums of all sizes of
 # rectangles:
 # https://en.wikipedia.org/wiki/Summed-area_table
+# Which links to this which is a better explanation
+# https://www.codeproject.com/Articles/441226/Haar-feature-Object-Detection-in-Csharp
 
 # Find the fuel cell's rack ID, which is its X coordinate plus 10.
 # Begin with a power level of the rack ID times the Y coordinate.
@@ -53,7 +55,9 @@ def find_best_size(sat, x, y, width)
   best_size = -1
   size = 1
 
-  while x + size < width do
+  while x + size <= width + 1 do
+
+#    print "try size x #{x} #{size} - 1 (#{x + size - 1})\n"
     
     sum = sat_sum(sat, x, y, x + size - 1, y + size - 1)
     
@@ -109,15 +113,14 @@ def summed_area_table(grid, size)
   out
 end
 
-def sat_sum(sat,x1d,y1d,x2,y2)
-  x1 = x1d - 1
-  y1 = y1d - 1
-  sat[[x2,y2]] + sat[[x1,y1]] - sat[[x2,y1]] - sat[[x1,y2]]
+# Calculate the sum of an arbitrary rectangle
+# using the summed area table
+def sat_sum(sat,x1,y1,x2,y2)
+  sat[[x2,y2]] -
+    sat[[x2,y1-1]] -
+    sat[[x1-1,y2]] +
+    sat[[x1-1,y1-1]]
 end
-
-grid = make_grid(5719)
-
-#sat_small = summed_area_table(test_grid, 6)
 
 def draw_sat(sat, width)
   print "\n"
@@ -129,8 +132,6 @@ def draw_sat(sat, width)
   end
   print "\n"
 end
-
-sat_large = summed_area_table(grid, 300)
 
 def png_grid(grid)
   size = Integer.sqrt(grid.length)
@@ -156,8 +157,6 @@ def png_grid(grid)
   
 end
 
-# png_grid(grid)
-
 def grid_array_to_hash(grid)
   grid_h = Hash.new(0)
 
@@ -169,7 +168,9 @@ def grid_array_to_hash(grid)
   grid_h
 end
 
-# find_best(sat_large, 300)
+#grid = make_grid(5719)
+#sat_large = summed_area_table(grid, 300)
+#find_best(sat_large, 300)
 
 # best 39405 at [1, 295]
 # best 38826 at [1, 295]

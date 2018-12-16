@@ -26,6 +26,31 @@ describe "Finding the correct grid using summed area table" do
 
 end
 
+describe "Finding the correct grid using summed area table in bottom right" do
+
+  let(:grid) {
+    grid_array_to_hash([
+      [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
+      [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
+      [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
+      [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
+      [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
+      [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
+      [-1,-1,-1,-1,-1,-1,10,10,10,10],
+      [-1,-1,-1,-1,-1,-1,10,10,10,10],
+      [-1,-1,-1,-1,-1,-1,10,10,10,10],
+      [-1,-1,-1,-1,-1,-1,10,10,10,10]
+                       ])
+  }
+  
+  let(:grid_sat) { summed_area_table(grid, 10) }
+
+  subject { find_best(grid_sat, 10) }
+
+  specify { expect(subject).to eql([7,7,4]) }
+
+end
+
 describe "Create sat from wikipedia entry" do
 
   let(:provided_grid) {
@@ -55,6 +80,8 @@ describe "Create sat from wikipedia entry" do
   subject { summed_area_table(provided_grid, 6)  }
 
   specify { expect(subject).to eql(provided_sat) }
+
+  specify { expect(sat_sum(provided_sat, 3,4, 5,5)).to eql(111)  }
   
 end
 
@@ -79,13 +106,34 @@ describe "Sat Is correct with uniform array" do
 
   subject { find_best(grid_sat, 10) }
 
-  # TODO should be 1,1,10 but is 1,1,8
+  specify { expect(sat_sum(grid_sat, 9,9, 10,10)).to eql(4)  }
   
-  #  specify { expect(subject).to eql([4,7,3]) }
+  specify { expect(subject).to eql([1,1,10]) }
+  
   specify { draw_sat(grid_sat, 10) }
 
   specify { pp subject }
 
 end
+
+# For grid serial number 18, the largest total square (with a total power of 113) is 16x16 and has a top-left corner of 90,269, so its identifier is 90,269,16.
+describe "Test 1" do
+
+  let(:grid) {
+    make_grid(18)
+  }
+  
+  let(:grid_sat) { summed_area_table(grid, 300) }
+
+  subject { find_best(grid_sat, 300) }
+
+  specify { expect(subject).to eql([90,269,16]) }
+  
+end
+
+
+
+# For grid serial number 42, the largest total square (with a total power of 119) is 12x12 and has a top-left corner of 232,251, so its identifier is 232,251,12.
+
 
 
