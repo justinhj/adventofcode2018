@@ -99,6 +99,26 @@ world[[500,0]] = 'w'
 
 draw_world(world, 490, 505, min_y, max_y)
 
+def settle_right?(world, x, y)
+  if world[[x,y]] == 'w' || world[[x,y]] == 'W'
+    settle_right?(world, x + 1, y)
+  elsif world[[x,y]] == '#'
+    true
+  else
+    false
+  end
+end
+
+def settle_left?(world, x, y)
+  if world[[x,y]] == 'w' || world[[x,y]] == 'W'
+    settle_left?(world, x - 1, y)
+  elsif world[[x,y]] == '#'
+    true
+  else
+    false
+  end
+end
+
 # Returns count of water
 def iterate(world, min_x, max_x, min_y, max_y)
 
@@ -109,32 +129,48 @@ def iterate(world, min_x, max_x, min_y, max_y)
   old_world.each do |coord, thing|
 
     x,y = coord
+
+    if thing == 'W'
+      water += 1
+    end
+    
     if thing == 'w'
 #      binding.pry
       water +=1
 
+      next if y == max_y
+      
       # Water can move down
       if world[[x,y+1]] == '.'
           world[[x,y+1]] = 'w'
-          water +=1 
+      end
+
+      # hitting water can move left or right into empty space if supported by
+      # settled water 'W' or clay 
+      if world[[x,y+1]] == 'W' && (world[[x-1,y+1]] == 'W' || world[[x-1,y+1]] == '#')  && world[[x-1,y]] == '.'
+        world[[x-1,y]] = 'w'
+      end
+      if world[[x,y+1]] == 'W' && (world[[x+1,y+1]] == 'W' || world[[x+1,y+1]] == '#') && world[[x+1,y]] == '.'
+        world[[x+1,y]] = 'w'
       end
       
-      # Resting water can move left or right
+      # Hitting a floor can move left or right into empty space
       if world[[x,y+1]] == '#'
         if world[[x-1,y]] == '.'
           world[[x-1,y]] = 'w'
-          water +=1 
         end
 
         if world[[x+1,y]] == '.'
           world[[x+1,y]] = 'w'
-          water +=1 
         end
-          
+      end
+
+      # This can become settled water if there is nothing but water or clay to the left and right
+      if settle_left?(world, x, y) && settle_right?(world, x, y)
+        world[[x,y]] = 'W'
       end
       
     end
-    
   end
 
   water
@@ -153,3 +189,4 @@ loop do
     break
   end
 end
+
