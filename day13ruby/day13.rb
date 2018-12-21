@@ -85,15 +85,19 @@ def cars_from_map(map)
       is_car, direction = is_car(c)
 
       if is_car == true
-        
-        
+        cars << Car.new(x,y,direction)
       end
       x += 1
     end
   end
 
-  map, cars
+  [map, cars]
 end
+
+map, cars = cars_from_map(map)
+
+pp cars
+
 
     
   
