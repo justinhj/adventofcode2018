@@ -34,3 +34,71 @@ end
 
 draw_map(map)
 
+def next_turn(current)
+  case current
+  when :left
+    :straight
+  when :straight
+    :right
+  when :right
+    :left
+  end
+end
+
+# define cars, extract cars from map
+
+class Car
+  attr_accessor :x,:y,:direction,:next_turn
+
+  def initialize(x,y,direction)
+    @x = x
+    @y = y
+    @direction = direction
+    @next_turn = :left
+  end
+end
+
+# Returns boolean whether character is a car or not
+# and the direction it's going
+def is_car(c)
+  case c
+  when 'v'
+    [true, :down]
+  when '^'
+    [true, :up]
+  when '>'
+    [true, :right]
+  when '<'
+    [true, :left]
+  else
+    [false, nil]
+  end
+end
+
+# removes cars from map, returns a new map with no
+# cars and a list of cars
+def cars_from_map(map)
+  cars = []
+  map.each_with_index do |row,y|
+    x = 0
+    row.each do |c|
+      is_car, direction = is_car(c)
+
+      if is_car == true
+        
+        
+      end
+      x += 1
+    end
+  end
+
+  map, cars
+end
+
+    
+  
+
+
+
+
+

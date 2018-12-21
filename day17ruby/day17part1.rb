@@ -12,6 +12,8 @@ world = Hash.new('.')
 
 min_y = 9999999
 max_y = -9999999
+min_x = 999999
+max_x = -999999
 
 lines.each do |line|
 
@@ -20,6 +22,10 @@ lines.each do |line|
   unless xm.nil?
     x,y1,y2 = xm.captures.map(&:to_i)
     #print "#{x},#{y1},#{y2}\n"
+
+    if x < min_x
+      min_x = x
+    end
     
     if y1 < y2
       if y1 < min_y
@@ -66,6 +72,14 @@ lines.each do |line|
 
     if x1 < x2
 
+      if x1 < min_x
+        min_x = x1
+      end
+
+      if x2 > max_x
+        max_x = x2
+      end
+
       (x1..x2).each do |x|
         world[[x,y]] = '#'
       end
@@ -99,9 +113,14 @@ world[[500,0]] = 'w'
 
 draw_world(world, 490, 505, min_y, max_y)
 
-def settle_right?(world, x, y)
+def settle_right?(world, x, y, min_x, max_x)
+
+  if x < min_x || x > max_x
+    false
+  end
+  
   if world[[x,y]] == 'w' || world[[x,y]] == 'W'
-    settle_right?(world, x + 1, y)
+    settle_right?(world, x + 1, y, min_x, max_x)
   elsif world[[x,y]] == '#'
     true
   else
@@ -109,9 +128,14 @@ def settle_right?(world, x, y)
   end
 end
 
-def settle_left?(world, x, y)
+def settle_left?(world, x, y, min_x, max_x)
+
+  if x < min_x || x > max_x
+    false
+  end
+  
   if world[[x,y]] == 'w' || world[[x,y]] == 'W'
-    settle_left?(world, x - 1, y)
+    settle_left?(world, x - 1, y, min_x, max_x)
   elsif world[[x,y]] == '#'
     true
   else
@@ -166,7 +190,7 @@ def iterate(world, min_x, max_x, min_y, max_y)
       end
 
       # This can become settled water if there is nothing but water or clay to the left and right
-      if settle_left?(world, x, y) && settle_right?(world, x, y)
+      if settle_left?(world, x, y, min_x, max_x) && settle_right?(world, x, y, min_x, max_x)
         world[[x,y]] = 'W'
       end
       
@@ -176,17 +200,21 @@ def iterate(world, min_x, max_x, min_y, max_y)
   water
 end
 
+printf("Bounds x %d,%d y %d,%d\n", min_x,max_x, min_y, max_y)
+
 loop do
 
-  count = iterate(world, 490, 505, min_y, max_y)
-  draw_world(world, 490, 505, min_y, max_y)
+#  binding.pry
+  
+  count = iterate(world, min_x - 2, max_x + 2, min_y, max_y)
+#  draw_world(world, min_x - 2, max_x + 2, min_y, max_y)
 
   print "water #{count}\n"
   
-  k = STDIN.getch
+  # k = STDIN.getch
   
-  if k == 'q'
-    break
-  end
+  # if k == 'q'
+  #   break
+  # end
 end
 
