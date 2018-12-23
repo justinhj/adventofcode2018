@@ -1,4 +1,5 @@
 require 'pry-byebug'
+require 'io/console'
 
 filename = ARGV.first || __dir__ + '/input.txt'
 
@@ -52,8 +53,8 @@ def iterate(pots, start_pot, rules)
     i -= 1
   end
 
-  if count_end_empty_pots < 2
-    add_pots = 2 - count_end_empty_pots
+  if count_end_empty_pots < 3
+    add_pots = 3 - count_end_empty_pots
     print "Adding #{add_pots} pots at end\n"
     pots += "." * add_pots
   end
@@ -67,8 +68,8 @@ def iterate(pots, start_pot, rules)
     i += 1
   end
   
-  if count_start_empty_pots < 2
-    add_pots = 2 - count_end_empty_pots
+  if count_start_empty_pots < 3
+    add_pots = 3 - count_end_empty_pots
     pots = "." * add_pots + pots
     start_pot += add_pots
     print "Adding #{add_pots} pots at start. First pot now at #{start_pot}\n"
@@ -83,13 +84,26 @@ def iterate(pots, start_pot, rules)
 
   plant_changes = []
   rules.each do |rule|
-    pos = pots.index(rule[0]) 
-    if ! pos.nil?
-      printf "#{rule[0]} matches so #{rule[1]} is new state of pot at index #{pos + 2}\n"
-      plant_changes << [rule[1], pos + 2]
+    search_pos = 0
+    found = true
+    while found do
+      match = pots.match(Regexp.escape(rule[0]), search_pos)
+
+      found = false if match.nil?
+
+      if found
+        printf "#{rule[0]} matches so #{rule[1]} is new state of pot at index #{match.begin(0) + 2}\n"
+        plant_changes << [rule[1], match.begin(0) + 2]
+        search_pos = match.begin(0) + 1
+      end
     end
   end
 
+  #binding.pry
+
+  pots = '.' * pots.length 
+  
+  # # Apply plant births and deaths
   plant_changes.each do |change|
     pots[change[1]] = change[0]
   end
@@ -99,18 +113,31 @@ def iterate(pots, start_pot, rules)
   [pots, start_pot]
 end
 
+def get_total(first_pot, pots)
+  sum = 0
+  
+  (0...pots.length).each_with_index do |pot, index|
+    if pots[index] == '#'
+      sum += (index - first_pot)
+    end
+  end
+  sum
+end
+
 gen = 1
 while gen <= 20
   pots, first_pot = iterate(pots, first_pot, rules)
 
-  printf "gen #{gen} #{pots}\n"
+  if gen == 20
+    total = get_total(first_pot, pots)
+    printf "gen #{gen} #{pots} total #{total}\n"
+  end
 
   gen += 1
+
+  # k = STDIN.getch
+  # if k == 'q'
+  #   exit
+  # end
+
 end
-
-
-
-
-
-
-

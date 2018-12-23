@@ -35,9 +35,6 @@ lines.each_with_index do |line, index|
   map[index] = row
 end
 
-# Draw the initial map with cars
-draw_map(map)
-
 def turn_direction(direction, turn)
   case turn
   when :left
@@ -274,15 +271,13 @@ def move_cars(cars, map)
   
 end
 
-draw_map(map)
-
 cars = sort_cars(cars)
 draw_cars(cars)
 
-animate = false
+animate = true
 
 if animate
-
+  draw_map(map)
   # Animate the solution
   loop do
     print $move_up * ($height + 1)

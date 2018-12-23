@@ -34,9 +34,6 @@ lines.each_with_index do |line, index|
   map[index] = row
 end
 
-# Draw the initial map with cars
-draw_map(map)
-
 def turn_direction(direction, turn)
   case turn
   when :left
@@ -170,6 +167,10 @@ $move_down = "\u001b[1B"
 $move_right = "\u001b[1C"
 $move_left = "\u001b[1D"
 
+$bright_red = "\u001b[31;1m"
+
+$reset = "\u001b[0m"
+
 def draw_cars(cars)
   cars.each do |car|    
     # Move up
@@ -177,7 +178,7 @@ def draw_cars(cars)
     # Move right
     printf("\u001b[%dC", car.x) unless car.x == 0
     
-    printf car_direction_to_s(car.direction) + $move_left
+    printf $bright_red + car_direction_to_s(car.direction) + $reset + $move_left
 
     # Move down
     printf("\u001b[%dB", $height - car.y + 1)
@@ -251,8 +252,7 @@ def move_cars(cars, map)
     end
     positions, collide = check_collide(positions, car.x, car.y)
     if collide
-      print "Collision! Press q to exit or any other key to continue"
-      pp car
+      print $move_up + "Collision at (#{car.x},#{car.y}) Press q to exit or any other key to continue"
       k = STDIN.getch
       if k == 'q'
         exit
@@ -268,7 +268,7 @@ draw_map(map)
 cars = sort_cars(cars)
 draw_cars(cars)
 
-animate = false
+animate = true
 
 if animate
 
@@ -279,7 +279,7 @@ if animate
     print $move_left * 1000
     cars = move_cars(cars, map)
     draw_cars(cars)
-    sleep 0.5
+    sleep 0.25
   end
 else
   loop do
