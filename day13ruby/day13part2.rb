@@ -1,5 +1,6 @@
 require 'pry-byebug'
 require 'io/console'
+require 'set'
 
 filename = ARGV.first || __dir__ + '/input.txt'
 
@@ -80,9 +81,10 @@ end
 # define cars, extract cars from map
 
 class Car
-  attr_accessor :x,:y,:direction,:next_turn
+  attr_accessor :x,:y,:direction,:next_turn,:id
   
-  def initialize(x,y,direction)
+  def initialize(id,x,y,direction)
+    @id = id
     @x = x
     @y = y
     @direction = direction
@@ -137,13 +139,15 @@ end
 # cars and a list of cars
 def cars_from_map(map)
   cars = []
+  id = 0
   map.each_with_index do |row,y|
     x = 0
     row.each do |c|
       is_car, direction = is_car(c)
 
       if is_car == true
-        cars << Car.new(x,y,direction)
+        cars << Car.new(id, x,y,direction)
+        id += 1
         
         track = track_from_car(c)
 
@@ -186,23 +190,27 @@ def draw_cars(cars)
   end
 end
 
-def check_collide(positions, x, y)
-
-  if positions.include? [x,y]
-    [positions, true]
-  else
-    positions[[x,y]]=true
-    [positions, false]
-  end
-end
-
 def move_cars(cars, map)
-
-  positions = {}
   
+  positions = cars.each_with_object(Hash.new {Set.new()} ) do |car, acc|
+    s = acc[[car.x, car.y]]
+    s.add car.id
+    acc[[car.x, car.y]] = s
+    acc
+  end
+
+  deleted_cars = Set.new()
+
+#  binding.pry
   cars = sort_cars(cars)
   cars.map do |car|
+
+    next if deleted_cars.include? car.id
+    
     m = map[car.y][car.x]
+
+    positions[[car.x,car.y]].delete(car.id)
+    
     if m == '-' and car.direction == :right
       car.x = car.x + 1
     elsif m == '-' and car.direction == :left
@@ -249,18 +257,21 @@ def move_cars(cars, map)
         car.x = car.x + 1
       end
     end
-    positions, collide = check_collide(positions, car.x, car.y)
-    if collide
-      print "Collision! Press q to exit or any other key to continue"
-      pp car
-      k = STDIN.getch
-      if k == 'q'
-        exit
-      end
 
+#    binding.pry
+    positions[[car.x,car.y]] = positions[[car.x,car.y]].add car.id
+
+    if positions[[car.x,car.y]].length > 1
+      positions[[car.x,car.y]].each { |c| deleted_cars.add c }
+#      pp deleted_cars
+      positions[[car.x, car.y]] = Set.new()
     end
+    
   end
-  cars
+
+  # Remove cars at collide positions
+  cars.delete_if { |car| deleted_cars.include? car.id }
+  
 end
 
 draw_map(map)
@@ -279,10 +290,26 @@ if animate
     print $move_left * 1000
     cars = move_cars(cars, map)
     draw_cars(cars)
-    sleep 0.5
+    sleep 0.2
+    if cars.length == 1
+      car = cars.first
+      print "Last car is at #{car.x},#{car.y}"
+      k = STDIN.getch
+      if k == 'q'
+        exit
+      end
+    end
   end
 else
   loop do
     cars = move_cars(cars, map)
+    if cars.length == 1
+      car = cars.first
+      print "Last car is at #{car.x},#{car.y}"
+      k = STDIN.getch
+      if k == 'q'
+        exit
+      end
+    end
   end
 end
