@@ -44,7 +44,7 @@ rules = load_rules(lines)
 
 def iterate(pots, start_pot, rules)
 
-  print "incoming pots #{pots}\n"
+#  print "incoming pots #{pots}\n"
   
   count_end_empty_pots = 0
   i = pots.length - 1
@@ -55,11 +55,11 @@ def iterate(pots, start_pot, rules)
 
   if count_end_empty_pots < 3
     add_pots = 3 - count_end_empty_pots
-    print "Adding #{add_pots} pots at end\n"
+#    print "Adding #{add_pots} pots at end\n"
     pots += "." * add_pots
   end
 
-  print "after add right pots #{pots}\n"
+#  print "after add right pots #{pots}\n"
 
   count_start_empty_pots = 0
   i = 0
@@ -72,10 +72,10 @@ def iterate(pots, start_pot, rules)
     add_pots = 3 - count_end_empty_pots
     pots = "." * add_pots + pots
     start_pot += add_pots
-    print "Adding #{add_pots} pots at start. First pot now at #{start_pot}\n"
+#    print "Adding #{add_pots} pots at start. First pot now at #{start_pot}\n"
   end
 
-  print "after add left pots #{pots}\n"
+#  print "after add left pots #{pots}\n"
   
   # Now find a matching rule and apply it
   # So as not to modify the plants before the rules have all been
@@ -92,7 +92,7 @@ def iterate(pots, start_pot, rules)
       found = false if match.nil?
 
       if found
-        printf "#{rule[0]} matches so #{rule[1]} is new state of pot at index #{match.begin(0) + 2}\n"
+#        printf "#{rule[0]} matches so #{rule[1]} is new state of pot at index #{match.begin(0) + 2}\n"
         plant_changes << [rule[1], match.begin(0) + 2]
         search_pos = match.begin(0) + 1
       end
@@ -108,7 +108,7 @@ def iterate(pots, start_pot, rules)
     pots[change[1]] = change[0]
   end
   
-  print "after apply changes #{pots}\n"
+#  print "after apply changes #{pots}\n"
   
   [pots, start_pot]
 end
@@ -124,20 +124,25 @@ def get_total(first_pot, pots)
   sum
 end
 
+generations = 10000
+
+
 gen = 1
-while gen <= 20
+while gen <= generations
   pots, first_pot = iterate(pots, first_pot, rules)
 
-  if gen == 20
+  if false # gen % 1 == 0
+    print "gen #{gen} length #{pots.length.to_s} total #{get_total(first_pot, pots)}\n"
+  end
+
+
+  if gen == generations
     total = get_total(first_pot, pots)
-    printf "gen #{gen} #{pots} total #{total}\n"
+    printf "\ngen #{gen} #{pots} total #{total}\n"
+    exit
   end
 
   gen += 1
 
-  # k = STDIN.getch
-  # if k == 'q'
-  #   exit
-  # end
-
+  
 end
