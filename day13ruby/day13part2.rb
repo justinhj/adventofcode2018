@@ -75,6 +75,23 @@ def next_turn(current)
   end
 end
 
+# Just for fun an explosion class
+
+class Explosion
+  attr_accessor :x,:y,:animation
+  def initialize(x,y)
+    @x = x
+    @y = y
+    @animation = "oO@*o"
+  end
+
+  def next_frame
+    f = @animation[0]
+    @animation[0] = ""
+    f
+  end
+end
+  
 # define cars, extract cars from map
 
 class Car
@@ -171,6 +188,33 @@ $move_down = "\u001b[1B"
 $move_right = "\u001b[1C"
 $move_left = "\u001b[1D"
 
+$bright_green = "\u001b[32;1m"
+$bright_red = "\u001b[31;1m"
+
+$reset = "\u001b[0m"
+
+def draw_explosions(explosions)
+  explosions.each do |explode|
+
+    frame = explode.next_frame()
+    
+    next if frame.nil?
+    
+    # Move up
+    printf("\u001b[%dA", $height - explode.y + 1)
+    # Move right
+    printf("\u001b[%dC", explode.x) unless explode.x == 0
+    
+    printf $bright_red + frame + $move_left + $reset
+    
+    # Move down
+    printf("\u001b[%dB", $height - explode.y + 1)
+    # Move left
+    printf("\u001b[%dD", explode.x) unless explode.x == 0
+  end
+  
+end
+
 def draw_cars(cars)
   cars.each do |car|    
     # Move up
@@ -178,8 +222,7 @@ def draw_cars(cars)
     # Move right
     printf("\u001b[%dC", car.x) unless car.x == 0
     
-    printf car_direction_to_s(car.direction) + $move_left
-
+    printf $bright_green + car_direction_to_s(car.direction) + $reset + $move_left
     # Move down
     printf("\u001b[%dB", $height - car.y + 1)
     # Move left
@@ -187,7 +230,7 @@ def draw_cars(cars)
   end
 end
 
-def move_cars(cars, map)
+def move_cars(cars, explosions, map)
   
   positions = cars.each_with_object(Hash.new {Set.new()} ) do |car, acc|
     s = acc[[car.x, car.y]]
@@ -255,37 +298,44 @@ def move_cars(cars, map)
       end
     end
 
-#    binding.pry
     positions[[car.x,car.y]] = positions[[car.x,car.y]].add car.id
 
     if positions[[car.x,car.y]].length > 1
       positions[[car.x,car.y]].each { |c| deleted_cars.add c }
-#      pp deleted_cars
       positions[[car.x, car.y]] = Set.new()
     end
     
   end
 
+  cars.each do |car|
+    if deleted_cars.include? car.id
+      explosions << Explosion.new(car.x, car.y)
+    end
+  end
+  
   # Remove cars at collide positions
-  cars.delete_if { |car| deleted_cars.include? car.id }
+  [cars.delete_if { |car| deleted_cars.include? car.id }, explosions]
   
 end
 
 cars = sort_cars(cars)
-draw_cars(cars)
+#draw_cars(cars)
 
 animate = true
+explosions = []
+
+draw_map(map)
 
 if animate
-  draw_map(map)
   # Animate the solution
   loop do
-    print $move_up * ($height + 1)
     draw_map(map)
+    print $move_up * ($height + 1)
     print $move_left * 1000
-    cars = move_cars(cars, map)
+    cars, explosions = move_cars(cars, explosions, map)
+    draw_explosions(explosions)
     draw_cars(cars)
-    sleep 0.2
+    sleep 0.5
     if cars.length == 1
       car = cars.first
       print "Last car is at #{car.x},#{car.y}"
@@ -297,7 +347,7 @@ if animate
   end
 else
   loop do
-    cars = move_cars(cars, map)
+    cars, explosions = move_cars(cars, explosions, map)
     if cars.length == 1
       car = cars.first
       print "Last car is at #{car.x},#{car.y}"

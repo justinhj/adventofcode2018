@@ -168,6 +168,7 @@ $move_right = "\u001b[1C"
 $move_left = "\u001b[1D"
 
 $bright_red = "\u001b[31;1m"
+$bright_green = "\u001b[32;1m"
 
 $reset = "\u001b[0m"
 
@@ -178,7 +179,7 @@ def draw_cars(cars)
     # Move right
     printf("\u001b[%dC", car.x) unless car.x == 0
     
-    printf $bright_red + car_direction_to_s(car.direction) + $reset + $move_left
+    printf $bright_green + car_direction_to_s(car.direction) + $reset + $move_left
 
     # Move down
     printf("\u001b[%dB", $height - car.y + 1)
@@ -279,7 +280,7 @@ if animate
     print $move_left * 1000
     cars = move_cars(cars, map)
     draw_cars(cars)
-    sleep 0.25
+    sleep 0.5
   end
 else
   loop do
