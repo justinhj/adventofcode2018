@@ -71,7 +71,7 @@ lines.each do |line|
     end
 
     if y1 > $max_y
-      $max_y = y
+      $max_y = y1
     end
 
     if x1 < x2
@@ -110,8 +110,8 @@ world = Array.new($height) { Array.new($width, '.') }
 
 # Handle our shifting of the world to a zero based array
 def convert(x,y)
-  x = x - $min_x # + 3
-  y = y - 1
+  x = x - $min_x
+  y = y - $min_y
   [x,y]
 end
 
@@ -130,16 +130,17 @@ walls.each do |wall|
   (wall[:y1]..wall[:y2]).each do |y|
     (wall[:x1]..wall[:x2]).each do |x|
       cx,cy = convert(x,y)
+
       world[cy][cx] = '#'
     end
   end
 end
 
 # start the water
-wx, wy = convert(500,1)
+wx, wy = convert(500,$min_y)
 world[wy][wx] = 'w'
 
-draw_world(world)
+#draw_world(world)
 
 def settle_right?(world, x, y)
 
@@ -187,11 +188,10 @@ def iterate(world)
       end
     
       if thing == 'w'
-        # binding.pry
         water +=1
         
-        next if y >= $max_y - 1
-        
+        next if y >= $max_y - $min_y
+
         # Water can move down
         if world[y+1][x] == '.'
           world[y+1][x] = 'w'
@@ -234,10 +234,9 @@ same_for = 0
 
 loop do
 
-#  binding.pry
-  
   count = iterate(world)
-#  draw_world(world)
+
+  #draw_world(world)
 
   print "water #{count}\n"
 
@@ -252,11 +251,11 @@ loop do
 
   prev_count = count
   
-   k = STDIN.getch
+  #  k = STDIN.getch
   
-  if k == 'q'
-    break
-  end
+  # if k == 'q'
+  #   break
+  # end
 end
 
 
