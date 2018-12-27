@@ -176,6 +176,7 @@ end
 def iterate(world)
 
   water = 0
+  settled = 0
 
   ($min_y..$max_y).each do |wy|
     ($min_x..$max_x).each do |wx|
@@ -185,6 +186,7 @@ def iterate(world)
       
       if thing == 'W'
         water += 1
+        settled += 1
       end
     
       if thing == 'w'
@@ -220,13 +222,14 @@ def iterate(world)
         # This can become settled water if there is nothing but water or clay to the left and right
         if settle_left?(world, x, y) && settle_right?(world, x, y)
           world[y][x] = 'W'
+          settled += 1
         end
         
       end
     end
   end
 
-  water
+  [water, settled]
 end
 
 prev_count = -1
@@ -234,11 +237,11 @@ same_for = 0
 
 loop do
 
-  count = iterate(world)
+  count, settled = iterate(world)
 
   #draw_world(world)
 
-  print "water #{count}\n"
+  print "water #{count} settled #{settled}\n"
 
   if count == prev_count
     same_for += 1
