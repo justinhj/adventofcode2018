@@ -329,16 +329,16 @@ draw_map(map)
 if animate
   # Animate the solution
   loop do
-    draw_map(map)
     print $move_up * ($height + 1)
+    draw_map(map)
     print $move_left * 1000
     cars, explosions = move_cars(cars, explosions, map)
     draw_explosions(explosions)
     draw_cars(cars)
-    sleep 0.5
+    sleep 0.2
     if cars.length == 1
       car = cars.first
-      print "Last car is at #{car.x},#{car.y}"
+      print "\nLast car is at #{car.x},#{car.y}"
       k = STDIN.getch
       if k == 'q'
         exit

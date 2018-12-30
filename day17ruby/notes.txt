@@ -1,0 +1,13 @@
+Runtimes
+
+With Ruby 2.6.0-rc1 and no JIT
+
+real	33m3.555s
+user	20m19.984s
+sys	0m2.004s
+
+With Ruby 2.6.0-rc1 and JIT enabled
+
+real	15m56.693s
+user	16m40.066s
+sys	0m14.070s
