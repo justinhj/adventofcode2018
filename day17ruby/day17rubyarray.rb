@@ -119,7 +119,13 @@ def draw_world(world)
   ($min_y..$max_y).each do |y|
     ($min_x..$max_x).each do |x|
       cx,cy = convert(x,y)
-      print "#{world[cy][cx]} "
+      if world[cy][cx] == '|' || world[cy][cx] == '~' 
+        print $bright_blue + "#{world[cy][cx]} " + $reset
+      elsif world[cy][cx] == '#'
+        print $bright_white + "#{world[cy][cx]} " + $reset
+      else
+        print "  "
+      end
     end
     print "\n"
   end
@@ -138,7 +144,7 @@ end
 
 # start the water
 wx, wy = convert(500,$min_y)
-world[wy][wx] = 'w'
+world[wy][wx] = '|'
 
 #draw_world(world)
 
@@ -148,7 +154,7 @@ def settle_right?(world, x, y)
     false
   end
   
-  if world[y][x] == 'w' || world[y][x] == 'W'
+  if world[y][x] == '|' || world[y][x] == '~'
     settle_right?(world, x + 1, y)
   elsif world[y][x] == '#'
     true
@@ -163,7 +169,7 @@ def settle_left?(world, x, y)
     false
   end
   
-  if world[y][x] == 'w' || world[y][x] == 'W'
+  if world[y][x] == '|' || world[y][x] == '~'
     settle_left?(world, x - 1, y)
   elsif world[y][x] == '#'
     true
@@ -184,44 +190,44 @@ def iterate(world)
 
       thing = world[y][x]
       
-      if thing == 'W'
+      if thing == '~'
         water += 1
         settled += 1
       end
     
-      if thing == 'w'
+      if thing == '|'
         water +=1
         
         next if y >= $max_y - $min_y
 
         # Water can move down
         if world[y+1][x] == '.'
-          world[y+1][x] = 'w'
+          world[y+1][x] = '|'
         end
         
         # hitting water can move left or right into empty space if supported by
-        # settled water 'W' or clay 
-        if world[y+1][x] == 'W' && (world[y+1][x-1] == 'W' || world[y+1][x-1] == '#')  && world[y][x-1] == '.'
-          world[y][x-1] = 'w'
+        # settled water '~' or clay 
+        if world[y+1][x] == '~' && (world[y+1][x-1] == '~' || world[y+1][x-1] == '#')  && world[y][x-1] == '.'
+          world[y][x-1] = '|'
         end
-        if world[y+1][x] == 'W' && (world[y+1][x+1] == 'W' || world[y+1][x+1] == '#') && world[y][x+1] == '.'
-          world[y][x+1] = 'w'
+        if world[y+1][x] == '~' && (world[y+1][x+1] == '~' || world[y+1][x+1] == '#') && world[y][x+1] == '.'
+          world[y][x+1] = '|'
         end
         
         # Hitting a floor can move left or right into empty space
         if world[y+1][x] == '#'
           if world[y][x-1] == '.'
-            world[y][x-1] = 'w'
+            world[y][x-1] = '|'
           end
           
           if world[y][x+1] == '.'
-            world[y][x+1] = 'w'
+            world[y][x+1] = '|'
           end
         end
         
         # This can become settled water if there is nothing but water or clay to the left and right
         if settle_left?(world, x, y) && settle_right?(world, x, y)
-          world[y][x] = 'W'
+          world[y][x] = '~'
           settled += 1
         end
         
@@ -245,8 +251,13 @@ $move_down = "\u001b[1B"
 $move_right = "\u001b[1C"
 $move_left = "\u001b[1D"
 
+$bright_white = "\u001b[37;1m"
 $bright_red = "\u001b[31;1m"
 $bright_green = "\u001b[32;1m"
+$blue = "\u001b[34m"
+$bright_blue = "\u001b[34;1m"
+
+$reset = "\u001b[0m"
 
 loop do
 
@@ -256,7 +267,7 @@ loop do
     draw_world(world)
     print "water #{count} settled #{settled}\n"
     print $move_up * ($height + 2)
-    sleep 0.4
+    sleep 0.2
   end
     
   if count == prev_count
