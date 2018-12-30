@@ -235,17 +235,35 @@ end
 prev_count = -1
 same_for = 0
 
+animate = true
+key_wait = false
+
+# Ansi escape codes
+
+$move_up = "\u001b[1A"
+$move_down = "\u001b[1B"
+$move_right = "\u001b[1C"
+$move_left = "\u001b[1D"
+
+$bright_red = "\u001b[31;1m"
+$bright_green = "\u001b[32;1m"
+
 loop do
 
   count, settled = iterate(world)
 
-  #draw_world(world)
-
-  print "water #{count} settled #{settled}\n"
-
+  if animate
+    draw_world(world)
+    print "water #{count} settled #{settled}\n"
+    print $move_up * ($height + 2)
+    sleep 0.4
+  end
+    
   if count == prev_count
     same_for += 1
     if same_for > 5
+      print $move_down * ($height + 2)
+      print "water #{count} settled #{settled}\n"
       break
     end
   else
@@ -253,12 +271,14 @@ loop do
   end
 
   prev_count = count
-  
-  #  k = STDIN.getch
-  
-  # if k == 'q'
-  #   break
-  # end
+
+  if key_wait
+    k = STDIN.getch
+    
+    if k == 'q'
+      break
+    end
+  end
 end
 
 
