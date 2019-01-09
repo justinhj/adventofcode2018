@@ -10,10 +10,33 @@ lines = contents.split("\n")
 
 walls = Array.new(lines.length) { Array.new(lines[0].length) }
 
+class Unit
+  attr_accessor :x,:y,:type,:hp
+  
+  def initialize(x,y,type,hp)
+    @x = x
+    @y = y
+    @type = type
+    @hp = hp
+  end
+end
+
+units = []
+
 lines.each_with_index do |line, row|
   col = 0
   line.each_char do |cell|
-    walls[row][col] = cell
+
+    if cell == 'E'
+      units << Unit.new(col, row, 'E', 200)
+      walls[row][col] = '.'
+    elsif cell == 'G'
+      units << Unit.new(col, row, 'G', 200)
+      walls[row][col] = '.'
+    else
+      walls[row][col] = cell
+    end
+    
     col += 1
   end
 end
@@ -29,6 +52,8 @@ def draw_world(walls)
 end
 
 draw_world(walls)
+
+puts units
 
 # Data
 # 2d grid of walls
