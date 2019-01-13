@@ -1,3 +1,4 @@
+// -*- mode: Go; compile-command:"go build part1.go"; gdb-many-windows:t; -*-
 package main
 
 import (
@@ -38,11 +39,15 @@ type Evidence struct {
 // These can then be applied to each of the candidates
 
 // Returns a slice of evidence and the remaining lines
-func parseEvidence(lines []string) ([]Evidence, []string) {
+func parseEvidence(lines []string, start int) ([]Evidence, int) {
 
-	ev := make([]Evidence, 10)
+	ev := []Evidence{}
 
 	for {
+		if lines[start] == "" {
+			return ev, start
+		}
+
 		var before = `Before: \[(\d), (\d), (\d), (\d)\]`
 		var instruction = `(\d)+ (\d) (\d) (\d)`
 		var after = `After:  \[(\d+), (\d), (\d), (\d)\]`
@@ -51,18 +56,21 @@ func parseEvidence(lines []string) ([]Evidence, []string) {
 		r2 := regexp.MustCompile(instruction)
 		r3 := regexp.MustCompile(after)
 
-		matchBefore := r1.FindStringSubmatch(lines[0])
-		matchInstruction := r2.FindStringSubmatch(lines[1])
-		matchAfter := r3.FindStringSubmatch(lines[2])
+		matchBefore := r1.FindStringSubmatch(lines[start])
+		matchInstruction := r2.FindStringSubmatch(lines[start+1])
+		matchAfter := r3.FindStringSubmatch(lines[start+2])
+
+		if matchBefore == nil || matchInstruction == nil || matchAfter == nil {
+			return ev, start
+		}
 
 		reg1, e1 := strconv.Atoi(matchBefore[1])
 		reg2, e2 := strconv.Atoi(matchBefore[2])
 		reg3, e3 := strconv.Atoi(matchBefore[3])
 		reg4, e4 := strconv.Atoi(matchBefore[4])
 
-		if !(e1 != nil && e2 != nil && e3 != nil && e4 != nil) {
-			lines = lines[1:]
-			break
+		if e1 != nil || e2 != nil || e3 != nil || e4 != nil {
+			return ev, start
 		}
 
 		beforeDevice := Device{registers: [...]int{reg1, reg2, reg3, reg4}}
@@ -72,9 +80,8 @@ func parseEvidence(lines []string) ([]Evidence, []string) {
 		reg3, e3 = strconv.Atoi(matchAfter[3])
 		reg4, e4 = strconv.Atoi(matchAfter[4])
 
-		if !(e1 != nil && e2 != nil && e3 != nil && e4 != nil) {
-			lines = lines[1:]
-			break
+		if e1 != nil || e2 != nil || e3 != nil || e4 != nil {
+			return ev, start
 		}
 
 		afterDevice := Device{registers: [...]int{reg1, reg2, reg3, reg4}}
@@ -84,21 +91,18 @@ func parseEvidence(lines []string) ([]Evidence, []string) {
 		b, e3 := strconv.Atoi(matchInstruction[3])
 		c, e4 := strconv.Atoi(matchInstruction[4])
 
-		if !(e1 != nil && e2 != nil && e3 != nil && e4 != nil) {
-			lines = lines[1:]
-			break
+		if e1 != nil || e2 != nil || e3 != nil || e4 != nil {
+			return ev, start
 		}
 
 		thisInstruction := Instruction{op, a, b, c}
 
 		ev = append(ev, Evidence{beforeDevice, afterDevice, thisInstruction})
 
-		fmt.Printf("%v\n", ev)
-
-		lines = lines[4:]
+		start += 4
 	}
 
-	return ev, lines
+	return ev, start
 }
 
 func readLines(path string) ([]string, error) {
@@ -126,9 +130,9 @@ func main() {
 	lines, error := readLines(filename)
 
 	if error == nil {
-		evidence, _ := parseEvidence(lines)
+		evidence, next_line := parseEvidence(lines, 0)
 
-		fmt.Printf("Sucess %v\n", evidence)
+		fmt.Printf("Success %v\nstart %v", evidence, next_line)
 	} else {
 		fmt.Printf("Error %v\n", error)
 	}
