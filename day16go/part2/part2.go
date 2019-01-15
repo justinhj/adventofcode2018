@@ -40,10 +40,40 @@ type Evidence struct {
 	instruction Instruction
 }
 
+func parseInstructions(lines []string, start_line int) []Instruction {
+
+	instruction := `(\d)+ (\d) (\d) (\d)`
+	r1 := regexp.MustCompile(instruction)
+
+	var instructions []Instruction
+
+	for l := start_line; l < len(lines); l++ {
+		matchInstruction := r1.FindStringSubmatch(lines[l])
+
+		if matchInstruction == nil {
+			continue
+		}
+
+		op, e1 := strconv.Atoi(matchInstruction[1])
+		a, e2 := strconv.Atoi(matchInstruction[2])
+		b, e3 := strconv.Atoi(matchInstruction[3])
+		c, e4 := strconv.Atoi(matchInstruction[4])
+
+		if e1 == nil && e2 == nil && e3 == nil && e4 == nil {
+			thisInstruction := Instruction{op, a, b, c}
+			instructions = append(instructions, thisInstruction)
+		}
+	}
+
+	return instructions
+}
+
 // Returns a slice of evidence and the remaining lines
-func parseEvidence(lines []string, start int) ([]Evidence, int) {
+func parseEvidence(lines []string) ([]Evidence, int) {
 
 	ev := []Evidence{}
+
+	start := 0
 
 	for {
 		if lines[start] == "" {
@@ -106,36 +136,6 @@ func parseEvidence(lines []string, start int) ([]Evidence, int) {
 	return ev, start
 }
 
-// https://stackoverflow.com/questions/30226438/generate-all-permutations-in-go
-// Generate permutations of an array ints
-func permutations(arr []int) [][]int {
-	var helper func([]int, int)
-	res := [][]int{}
-
-	helper = func(arr []int, n int) {
-		if n == 1 {
-			tmp := make([]int, len(arr))
-			copy(tmp, arr)
-			res = append(res, tmp)
-		} else {
-			for i := 0; i < n; i++ {
-				helper(arr, n-1)
-				if n%2 == 1 {
-					tmp := arr[i]
-					arr[i] = arr[n-1]
-					arr[n-1] = tmp
-				} else {
-					tmp := arr[0]
-					arr[0] = arr[n-1]
-					arr[n-1] = tmp
-				}
-			}
-		}
-	}
-	helper(arr, len(arr))
-	return res
-}
-
 // Get the candidates that match this evidence
 func getCandidates(ev Evidence, ops []Operation) []int {
 	var candidates []int
@@ -161,6 +161,53 @@ func readLines(path string) ([]string, error) {
 		lines = append(lines, scanner.Text())
 	}
 	return lines, scanner.Err()
+}
+
+func getOpCodesHelper(first int, cs map[int]CandidateSet, used map[int]int) map[int]int {
+
+	if len(used) == len(cs) {
+		return used // the solution!
+	} else if first == len(cs) {
+		return nil // failed
+	}
+
+	var candidates map[int]bool
+	candidates = cs[first]
+
+	for candidate, _ := range candidates {
+
+		_, found := used[candidate]
+
+		if found {
+			continue
+		}
+
+		newUsed := make(map[int]int)
+		for key, value := range used {
+			newUsed[key] = value
+		}
+
+		newUsed[candidate] = first
+
+		result := getOpCodesHelper(first+1, cs, newUsed)
+
+		if result != nil {
+			return result
+		}
+	}
+
+	return nil
+}
+
+func getOpCodes(cs map[int]CandidateSet) map[int]int {
+
+	// // sigh: we need to make the keys for the map
+	// keys := make([]int, 0, len(cs))
+	// for k := range cs {
+	// 	keys = append(keys, k)
+	// }
+
+	return getOpCodesHelper(0, cs, make(map[int]int))
 }
 
 func main() {
@@ -342,19 +389,12 @@ func main() {
 	opCandidates := make(map[int]CandidateSet)
 
 	if error == nil {
-		evidence, _ := parseEvidence(lines, 0)
+		evidence, next_line := parseEvidence(lines)
+
+		instructions := parseInstructions(lines, next_line)
 
 		for _, ev := range evidence {
 			candidates := getCandidates(ev, ops)
-			//			fmt.Printf("opcode %d could be %v\n", ev.instruction.opCode, candidates)
-
-			// if len(candidates) == 1 {
-			// 	fmt.Printf("opcode %d is opcode index %d (%s)\n",
-			// 		ev.instruction.opCode,
-			// 		candidates[0],
-			// 		ops[candidates[0]].name,
-			// 	)
-			// }
 
 			for _, candidate := range candidates {
 				m, found := opCandidates[ev.instruction.opCode]
@@ -368,6 +408,24 @@ func main() {
 		}
 
 		fmt.Printf("%v\n", opCandidates)
+
+		opCodes := getOpCodes(opCandidates)
+
+		fmt.Printf("Result %v\n", opCodes)
+
+		// Now we have our opcodes run the code
+
+		//fmt.Printf("Instructions %v\n", instructions)
+
+		state := Device{registers: [...]int{0, 0, 0, 0}}
+
+		for _, instruction := range instructions {
+			op := instruction.opCode
+			op = opCodes[op]
+			state = ops[op].Execute(state, instruction)
+		}
+
+		fmt.Printf("State %v\n", state)
 
 	} else {
 		fmt.Printf("Error %v\n", error)
