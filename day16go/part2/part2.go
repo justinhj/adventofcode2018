@@ -1,4 +1,4 @@
-// -*- mode: Go; compile-command:"go build part1.go" -*-
+// -*- mode: Go; compile-command:"go build part2.go" -*-
 package main
 
 import (
@@ -12,6 +12,8 @@ import (
 type Device struct {
 	registers [4]int
 }
+
+type CandidateSet map[int]bool
 
 type Instruction struct {
 	opCode int
@@ -104,15 +106,46 @@ func parseEvidence(lines []string, start int) ([]Evidence, int) {
 	return ev, start
 }
 
-func countCandidates(ev Evidence, ops []Operation) int {
-	count := 0
-	for _, op := range ops {
-		result := op.Execute(ev.before, ev.instruction)
-		if result == ev.after {
-			count += 1
+// https://stackoverflow.com/questions/30226438/generate-all-permutations-in-go
+// Generate permutations of an array ints
+func permutations(arr []int) [][]int {
+	var helper func([]int, int)
+	res := [][]int{}
+
+	helper = func(arr []int, n int) {
+		if n == 1 {
+			tmp := make([]int, len(arr))
+			copy(tmp, arr)
+			res = append(res, tmp)
+		} else {
+			for i := 0; i < n; i++ {
+				helper(arr, n-1)
+				if n%2 == 1 {
+					tmp := arr[i]
+					arr[i] = arr[n-1]
+					arr[n-1] = tmp
+				} else {
+					tmp := arr[0]
+					arr[0] = arr[n-1]
+					arr[n-1] = tmp
+				}
+			}
 		}
 	}
-	return count
+	helper(arr, len(arr))
+	return res
+}
+
+// Get the candidates that match this evidence
+func getCandidates(ev Evidence, ops []Operation) []int {
+	var candidates []int
+	for index, op := range ops {
+		result := op.Execute(ev.before, ev.instruction)
+		if result == ev.after {
+			candidates = append(candidates, index)
+		}
+	}
+	return candidates
 }
 
 func readLines(path string) ([]string, error) {
@@ -299,19 +332,43 @@ func main() {
 
 	lines, error := readLines(filename)
 
+	//	perms := permutations([]int{0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12})
+
+	//fmt.Printf("Number of perms is %d\n", len(perms))
+
+	// For part 2 create a map (really we want a set but we can use a map
+	// as a set for our purposes)
+
+	opCandidates := make(map[int]CandidateSet)
+
 	if error == nil {
 		evidence, _ := parseEvidence(lines, 0)
 
-		answer := 0
 		for _, ev := range evidence {
-			count := countCandidates(ev, ops)
-			fmt.Printf("%d\n", count)
-			if count >= 3 {
-				answer += 1
+			candidates := getCandidates(ev, ops)
+			//			fmt.Printf("opcode %d could be %v\n", ev.instruction.opCode, candidates)
+
+			// if len(candidates) == 1 {
+			// 	fmt.Printf("opcode %d is opcode index %d (%s)\n",
+			// 		ev.instruction.opCode,
+			// 		candidates[0],
+			// 		ops[candidates[0]].name,
+			// 	)
+			// }
+
+			for _, candidate := range candidates {
+				m, found := opCandidates[ev.instruction.opCode]
+
+				if found {
+					m[candidate] = true
+				} else {
+					opCandidates[ev.instruction.opCode] = make(map[int]bool)
+				}
 			}
 		}
 
-		fmt.Printf("Answer %d\n", answer)
+		fmt.Printf("%v\n", opCandidates)
+
 	} else {
 		fmt.Printf("Error %v\n", error)
 	}
