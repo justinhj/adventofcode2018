@@ -1,0 +1,14 @@
+we want an example where ambiguity is resolved
+
+eg 0 is addr and 1 is addi 
+
+Before: [0, 1, 2, 0]
+1 0 1 2 
+After:  [0, 1, 2, 1]
+
+Before: [0, 1, 2, 0]
+0 0 1 2 
+After:  [0, 1, 2, 1]
+
+1 0 1 2 
+

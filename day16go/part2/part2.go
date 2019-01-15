@@ -163,12 +163,12 @@ func readLines(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-func getOpCodesHelper(first int, cs map[int]CandidateSet, used map[int]int) map[int]int {
+func getOpCodesHelper(first int, cs map[int]CandidateSet, used map[int]int, solutions []map[int]int) []map[int]int {
 
 	if len(used) == len(cs) {
-		return used // the solution!
+		return append(solutions, used)
 	} else if first == len(cs) {
-		return nil // failed
+		return solutions
 	}
 
 	var candidates map[int]bool
@@ -189,25 +189,34 @@ func getOpCodesHelper(first int, cs map[int]CandidateSet, used map[int]int) map[
 
 		newUsed[candidate] = first
 
-		result := getOpCodesHelper(first+1, cs, newUsed)
+		solutions = getOpCodesHelper(first+1, cs, newUsed, solutions)
 
-		if result != nil {
-			return result
+	}
+
+	return solutions
+}
+
+func getOpCodes(cs map[int]CandidateSet) []map[int]int {
+
+	solutions := make([]map[int]int, 0)
+
+	return getOpCodesHelper(0, cs, make(map[int]int), solutions)
+}
+
+func checkMappingWithEvidence(mapping map[int]int, evidence []Evidence, ops []Operation) bool {
+
+	for _, ev := range evidence {
+		op := ev.instruction.opCode
+		op = mapping[op]
+
+		after := ops[op].Execute(ev.before, ev.instruction)
+
+		if after != ev.after {
+			return false
 		}
 	}
 
-	return nil
-}
-
-func getOpCodes(cs map[int]CandidateSet) map[int]int {
-
-	// // sigh: we need to make the keys for the map
-	// keys := make([]int, 0, len(cs))
-	// for k := range cs {
-	// 	keys = append(keys, k)
-	// }
-
-	return getOpCodesHelper(0, cs, make(map[int]int))
+	return true
 }
 
 func main() {
@@ -393,6 +402,8 @@ func main() {
 
 		instructions := parseInstructions(lines, next_line)
 
+		instructions = instructions
+
 		for _, ev := range evidence {
 			candidates := getCandidates(ev, ops)
 
@@ -409,23 +420,33 @@ func main() {
 
 		fmt.Printf("%v\n", opCandidates)
 
-		opCodes := getOpCodes(opCandidates)
+		opCodeMappings := getOpCodes(opCandidates)
 
-		fmt.Printf("Result %v\n", opCodes)
+		fmt.Printf("Found %d potential opcode mappings\n", len(opCodeMappings))
 
-		// Now we have our opcodes run the code
+		// Test each combination with the evidence and see which ones are good
 
-		//fmt.Printf("Instructions %v\n", instructions)
-
-		state := Device{registers: [...]int{0, 0, 0, 0}}
-
-		for _, instruction := range instructions {
-			op := instruction.opCode
-			op = opCodes[op]
-			state = ops[op].Execute(state, instruction)
+		for index, mapping := range opCodeMappings {
+			works := checkMappingWithEvidence(mapping, evidence, ops)
+			if works == true {
+				fmt.Printf("\n%v works\n", mapping)
+			}
+			if index%10000 == 0 {
+				fmt.Print(".")
+			}
 		}
 
-		fmt.Printf("State %v\n", state)
+		//Fmt.Printf("Instructions %v\n", instructions)
+
+		// state := Device{registers: [...]int{0, 0, 0, 0}}
+
+		// for _, instruction := range instructions {
+		// 	op := instruction.opCode
+		// 	op = opCodes[op]
+		// 	state = ops[op].Execute(state, instruction)
+		// }
+
+		// fmt.Printf("State %v\n", state)
 
 	} else {
 		fmt.Printf("Error %v\n", error)
