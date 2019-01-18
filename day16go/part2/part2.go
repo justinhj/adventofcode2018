@@ -76,7 +76,7 @@ func parseEvidence(lines []string) ([]Evidence, int) {
 	start := 0
 
 	for {
-		if lines[start] == "" {
+		if lines[start] == "" || start+2 > len(lines) {
 			return ev, start
 		}
 
@@ -87,6 +87,8 @@ func parseEvidence(lines []string) ([]Evidence, int) {
 		r1 := regexp.MustCompile(before)
 		r2 := regexp.MustCompile(instruction)
 		r3 := regexp.MustCompile(after)
+
+		fmt.Printf("lines %v %v start\n", lines, start)
 
 		matchBefore := r1.FindStringSubmatch(lines[start])
 		matchInstruction := r2.FindStringSubmatch(lines[start+1])
@@ -139,12 +141,20 @@ func parseEvidence(lines []string) ([]Evidence, int) {
 // Get the candidates that match this evidence
 func getCandidates(ev Evidence, ops []Operation) []int {
 	var candidates []int
+
+	fmt.Printf("Ins %d a %d b %d c %d\nbefore %v\nafter %v\n", ev.instruction.opCode, ev.instruction.a, ev.instruction.b, ev.instruction.c, ev.before, ev.after)
+
 	for index, op := range ops {
+
 		result := op.Execute(ev.before, ev.instruction)
+
+		fmt.Printf("op id %d name %s result %v\n", index, op.name, result)
+
 		if result == ev.after {
 			candidates = append(candidates, index)
 		}
 	}
+
 	return candidates
 }
 
@@ -400,6 +410,8 @@ func main() {
 	if error == nil {
 		evidence, next_line := parseEvidence(lines)
 
+		fmt.Printf("evidence %v\n", evidence)
+
 		instructions := parseInstructions(lines, next_line)
 
 		instructions = instructions
@@ -418,11 +430,11 @@ func main() {
 			}
 		}
 
-		fmt.Printf("%v\n", opCandidates)
+		fmt.Printf("op candidates%v\n", opCandidates)
 
 		opCodeMappings := getOpCodes(opCandidates)
 
-		fmt.Printf("Found %d potential opcode mappings\n", len(opCodeMappings))
+		fmt.Printf("Found %d potential opcode mappings %v\n", len(opCodeMappings), opCodeMappings)
 
 		// Test each combination with the evidence and see which ones are good
 
