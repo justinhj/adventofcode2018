@@ -422,11 +422,11 @@ func main() {
 			for _, candidate := range candidates {
 				m, found := opCandidates[ev.instruction.opCode]
 
-				if found {
-					m[candidate] = true
-				} else {
+				if !found {
 					opCandidates[ev.instruction.opCode] = make(map[int]bool)
+					m = opCandidates[ev.instruction.opCode]
 				}
+				m[candidate] = true
 			}
 		}
 
