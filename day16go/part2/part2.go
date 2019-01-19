@@ -8,7 +8,20 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"reflect"
 )
+
+// For set bullshit
+func addSolution(newSolution map[int]int, currentSolutions []map[int]int) []map[int]int {
+
+	for thing := range currentSolutions {
+		if reflect.DeepEqual(thing, newSolution) {
+			return currentSolutions
+		}
+	}
+
+	return append(currentSolutions, newSolution)
+}
 
 type Device struct {
 	registers [4]int
@@ -180,7 +193,7 @@ func getOpCodesHelper(cs map[int]CandidateSet, used map[int]int, solutions []map
 
 	if len(cs) == 0 {
 		fmt.Printf("gen %v\n", used)
-		return append(solutions, used)
+		return addSolution(used, solutions)
 	}
 
 	keys := make([]int, 0, len(cs))
@@ -233,11 +246,11 @@ func getOpCodesHelper(cs map[int]CandidateSet, used map[int]int, solutions []map
 				newCs[key] = candSet
 			}
 
-			recursiveSolutions := getOpCodesHelper(newCs, newUsed, solutions, depth + 1)
+			solutions = getOpCodesHelper(newCs, newUsed, solutions, depth + 1)
 
-			fmt.Printf("%sfound %d solutions\n", indent, len(recursiveSolutions))
-
-			solutions = append(solutions, recursiveSolutions...)
+			//fmt.Printf("%sfound %d solutions\n", indent, len(recursiveSolutions))
+			//
+			//solutions = append(solutions, recursiveSolutions...)
 		}
 	}
 
@@ -458,7 +471,7 @@ func main() {
 	// 	fmt.Printf("%v %v\n", k, v)
 	// }
 	fmt.Printf("Found %d potential opcode mappings %v\n", len(opCodes), opCodes)
-	os.Exit(0)
+	//os.Exit(0)
 
 	// END
 
