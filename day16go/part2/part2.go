@@ -5,10 +5,10 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
-	"reflect"
 )
 
 // For set bullshit
@@ -189,10 +189,12 @@ func getOpCodesHelper(cs map[int]CandidateSet, used map[int]int, solutions []map
 
 	indent := strings.Repeat("  ", depth)
 
-	fmt.Printf("%slen %d used %v solutions %d\n", indent, len(cs), used, len(solutions))
+	indent = indent
+
+	//	fmt.Printf("%slen %d used %v solutions %d\n", indent, len(cs), used, len(solutions))
 
 	if len(cs) == 0 {
-		fmt.Printf("gen %v\n", used)
+		//		fmt.Printf("gen %v\n", used)
 		return addSolution(used, solutions)
 	}
 
@@ -201,14 +203,18 @@ func getOpCodesHelper(cs map[int]CandidateSet, used map[int]int, solutions []map
 		keys = append(keys, k)
 	}
 
+	l := len(keys)
+
 	for _, k := range keys {
 
-		fmt.Printf("%sk %v\n", indent, k)
+		if depth == 0 {
+			fmt.Printf("k %v of %d\n", k, l)
+		}
 
 		//	fmt.Printf("k %v cs %v\n", k, cs[k])
 		candidates := cs[k]
 
-		fmt.Printf("%sshall loop over %v\n", indent,   cs[k])
+		//		fmt.Printf("%sshall loop over %v\n", indent,   cs[k])
 
 		for candidate, _ := range candidates {
 
@@ -246,7 +252,7 @@ func getOpCodesHelper(cs map[int]CandidateSet, used map[int]int, solutions []map
 				newCs[key] = candSet
 			}
 
-			solutions = getOpCodesHelper(newCs, newUsed, solutions, depth + 1)
+			solutions = getOpCodesHelper(newCs, newUsed, solutions, depth+1)
 
 			//fmt.Printf("%sfound %d solutions\n", indent, len(recursiveSolutions))
 			//
@@ -471,7 +477,7 @@ func main() {
 	// 	fmt.Printf("%v %v\n", k, v)
 	// }
 	fmt.Printf("Found %d potential opcode mappings %v\n", len(opCodes), opCodes)
-	//os.Exit(0)
+	//	os.Exit(0)
 
 	// END
 
@@ -507,7 +513,7 @@ func main() {
 
 		opCodeMappings := getOpCodes(opCandidates)
 
-		fmt.Printf("Found %d potential opcode mappings %v\n", len(opCodeMappings), opCodeMappings)
+		fmt.Printf("Found %d potential opcode mappings\n", len(opCodeMappings))
 
 		// Test each combination with the evidence and see which ones are good
 
