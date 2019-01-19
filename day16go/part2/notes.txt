@@ -1,14 +1,41 @@
-we want an example where ambiguity is resolved
 
-eg 0 is addr and 1 is addi 
 
-Before: [0, 1, 2, 0]
-1 0 1 2 
-After:  [0, 1, 2, 1]
+9 could 1 2 3
+10 could be 1 2
+11 could be 3
 
-Before: [0, 1, 2, 0]
-0 0 1 2 
-After:  [0, 1, 2, 1]
+9:
+1
+  10: 2
+     11: 3 return 9 1,10 2,10 3
+2
+  10: 1
+     11: 3 return 9 2, 10 1, 3
+3
+  9:3
+     10
+       10:1
+         11 fail
+     
+     11 fail
+       
 
-1 0 1 2 
+op code keys = the array 9,10,11
+
+find combinations
+input: keys (9,10,11) map 9: 1 2 3, 10: 1,2 11: 3   (input list (empty))  returns list of combos
+
+for each key
+  for each candidate
+    append combos to find combinations (10 11) map used (9)
+  end
+end
+  
+
+used 9 (1)
+remain 10,11
+used 9 (1) 10 (2)
+remain 11
+used 11 (3) 9 (1) 10 (2)
+gen solution
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 type Device struct {
@@ -32,7 +33,7 @@ type Operation struct {
 // 	Execute(d Device, i Instruction) Device
 // }
 
-// Represents a state change we can use
+// Evidence presents a state change we can use
 // to determine what the opcode does
 type Evidence struct {
 	before      Device
@@ -40,14 +41,14 @@ type Evidence struct {
 	instruction Instruction
 }
 
-func parseInstructions(lines []string, start_line int) []Instruction {
+func parseInstructions(lines []string, startLine int) []Instruction {
 
 	instruction := `(\d)+ (\d) (\d) (\d)`
 	r1 := regexp.MustCompile(instruction)
 
 	var instructions []Instruction
 
-	for l := start_line; l < len(lines); l++ {
+	for l := startLine; l < len(lines); l++ {
 		matchInstruction := r1.FindStringSubmatch(lines[l])
 
 		if matchInstruction == nil {
@@ -87,8 +88,6 @@ func parseEvidence(lines []string) ([]Evidence, int) {
 		r1 := regexp.MustCompile(before)
 		r2 := regexp.MustCompile(instruction)
 		r3 := regexp.MustCompile(after)
-
-		fmt.Printf("lines %v %v start\n", lines, start)
 
 		matchBefore := r1.FindStringSubmatch(lines[start])
 		matchInstruction := r2.FindStringSubmatch(lines[start+1])
@@ -142,13 +141,13 @@ func parseEvidence(lines []string) ([]Evidence, int) {
 func getCandidates(ev Evidence, ops []Operation) []int {
 	var candidates []int
 
-	fmt.Printf("Ins %d a %d b %d c %d\nbefore %v\nafter %v\n", ev.instruction.opCode, ev.instruction.a, ev.instruction.b, ev.instruction.c, ev.before, ev.after)
+	//	fmt.Printf("Ins %d a %d b %d c %d\nbefore %v\nafter %v\n", ev.instruction.opCode, ev.instruction.a, ev.instruction.b, ev.instruction.c, ev.before, ev.after)
 
 	for index, op := range ops {
 
 		result := op.Execute(ev.before, ev.instruction)
 
-		fmt.Printf("op id %d name %s result %v\n", index, op.name, result)
+		//		fmt.Printf("op id %d name %s result %v\n", index, op.name, result)
 
 		if result == ev.after {
 			candidates = append(candidates, index)
@@ -173,34 +172,73 @@ func readLines(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-func getOpCodesHelper(first int, cs map[int]CandidateSet, used map[int]int, solutions []map[int]int) []map[int]int {
+func getOpCodesHelper(cs map[int]CandidateSet, used map[int]int, solutions []map[int]int, depth int) []map[int]int {
 
-	if len(used) == len(cs) {
+	indent := strings.Repeat("  ", depth)
+
+	fmt.Printf("%slen %d used %v solutions %d\n", indent, len(cs), used, len(solutions))
+
+	if len(cs) == 0 {
+		fmt.Printf("gen %v\n", used)
 		return append(solutions, used)
-	} else if first == len(cs) {
-		return solutions
 	}
 
-	var candidates map[int]bool
-	candidates = cs[first]
+	keys := make([]int, 0, len(cs))
+	for k := range cs {
+		keys = append(keys, k)
+	}
 
-	for candidate, _ := range candidates {
+	for _, k := range keys {
 
-		_, found := used[candidate]
+		fmt.Printf("%sk %v\n", indent, k)
 
-		if found {
-			continue
+		//	fmt.Printf("k %v cs %v\n", k, cs[k])
+		candidates := cs[k]
+
+		fmt.Printf("%sshall loop over %v\n", indent,   cs[k])
+
+		for candidate, _ := range candidates {
+
+			//fmt.Printf("candidate %v\n", candidate)
+
+			_, found := used[candidate]
+
+			if found {
+				continue
+			}
+
+			// Make a copy of the used map to pass into the continued recursion
+			newUsed := make(map[int]int)
+			for key, value := range used {
+				newUsed[key] = value
+			}
+
+			newUsed[candidate] = k
+
+			// Copy candidate set without the current key
+			newCs := make(map[int]CandidateSet)
+			for key, value := range cs {
+				if key == k {
+					continue
+				}
+
+				// oh god this is so painful
+				// copy the candidate set manually
+
+				candSet := make(map[int]bool)
+				for ck, cv := range value {
+					candSet[ck] = cv
+				}
+
+				newCs[key] = candSet
+			}
+
+			recursiveSolutions := getOpCodesHelper(newCs, newUsed, solutions, depth + 1)
+
+			fmt.Printf("%sfound %d solutions\n", indent, len(recursiveSolutions))
+
+			solutions = append(solutions, recursiveSolutions...)
 		}
-
-		newUsed := make(map[int]int)
-		for key, value := range used {
-			newUsed[key] = value
-		}
-
-		newUsed[candidate] = first
-
-		solutions = getOpCodesHelper(first+1, cs, newUsed, solutions)
-
 	}
 
 	return solutions
@@ -210,7 +248,7 @@ func getOpCodes(cs map[int]CandidateSet) []map[int]int {
 
 	solutions := make([]map[int]int, 0)
 
-	return getOpCodesHelper(0, cs, make(map[int]int), solutions)
+	return getOpCodesHelper(cs, make(map[int]int), solutions, 0)
 }
 
 func checkMappingWithEvidence(mapping map[int]int, evidence []Evidence, ops []Operation) bool {
@@ -402,6 +440,28 @@ func main() {
 
 	//fmt.Printf("Number of perms is %d\n", len(perms))
 
+	// TEMP
+
+	c1 := map[int]bool{1: true, 2: true, 3: true}
+	c2 := map[int]bool{1: true, 2: true}
+	c3 := map[int]bool{3: true}
+
+	cs := make(map[int]CandidateSet)
+	cs[9] = c1
+	cs[10] = c2
+	cs[11] = c3
+
+	opCodes := getOpCodes(cs)
+
+	opCodes = opCodes
+	// for k, v := range opCodes {
+	// 	fmt.Printf("%v %v\n", k, v)
+	// }
+	fmt.Printf("Found %d potential opcode mappings %v\n", len(opCodes), opCodes)
+	os.Exit(0)
+
+	// END
+
 	// For part 2 create a map (really we want a set but we can use a map
 	// as a set for our purposes)
 
@@ -410,7 +470,7 @@ func main() {
 	if error == nil {
 		evidence, next_line := parseEvidence(lines)
 
-		fmt.Printf("evidence %v\n", evidence)
+		//fmt.Printf("evidence %v\n", evidence)
 
 		instructions := parseInstructions(lines, next_line)
 
