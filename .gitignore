@@ -6,6 +6,6 @@ day14go/day14go
 day16go/part1
 day16go/day16go
 day16go/.vscode/*
-
 \#*
-\.idea/*
+**\.idea/*
+
