@@ -5,24 +5,10 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
-	"strings"
 )
-
-// For set bullshit
-func addSolution(newSolution map[int]int, currentSolutions []map[int]int) []map[int]int {
-
-	for thing := range currentSolutions {
-		if reflect.DeepEqual(thing, newSolution) {
-			return currentSolutions
-		}
-	}
-
-	return append(currentSolutions, newSolution)
-}
 
 type Device struct {
 	registers [4]int
@@ -42,10 +28,6 @@ type Operation struct {
 	name    string
 	Execute func(d Device, i Instruction) Device
 }
-
-// type Op interface {
-// 	Execute(d Device, i Instruction) Device
-// }
 
 // Evidence presents a state change we can use
 // to determine what the opcode does
@@ -184,91 +166,6 @@ func readLines(path string) ([]string, error) {
 		lines = append(lines, scanner.Text())
 	}
 	return lines, scanner.Err()
-}
-
-func getOpCodesHelper(cs map[int]CandidateSet, used map[int]int, solutions []map[int]int, depth int) []map[int]int {
-
-	indent := strings.Repeat("  ", depth)
-
-	indent = indent
-
-	//	fmt.Printf("%slen %d used %v solutions %d\n", indent, len(cs), used, len(solutions))
-
-	if len(cs) == 0 {
-		//		fmt.Printf("gen %v\n", used)
-		return addSolution(used, solutions)
-	}
-
-	keys := make([]int, 0, len(cs))
-	for k := range cs {
-		keys = append(keys, k)
-	}
-
-	l := len(keys)
-
-	for _, k := range keys {
-
-		if depth == 0 {
-			fmt.Printf("k %v of %d\n", k, l)
-		}
-
-		//	fmt.Printf("k %v cs %v\n", k, cs[k])
-		candidates := cs[k]
-
-		//		fmt.Printf("%sshall loop over %v\n", indent,   cs[k])
-
-		for candidate, _ := range candidates {
-
-			//fmt.Printf("candidate %v\n", candidate)
-
-			_, found := used[candidate]
-
-			if found {
-				continue
-			}
-
-			// Make a copy of the used map to pass into the continued recursion
-			newUsed := make(map[int]int)
-			for key, value := range used {
-				newUsed[key] = value
-			}
-
-			newUsed[candidate] = k
-
-			// Copy candidate set without the current key
-			newCs := make(map[int]CandidateSet)
-			for key, value := range cs {
-				if key == k {
-					continue
-				}
-
-				// oh god this is so painful
-				// copy the candidate set manually
-
-				candSet := make(map[int]bool)
-				for ck, cv := range value {
-					candSet[ck] = cv
-				}
-
-				newCs[key] = candSet
-			}
-
-			solutions = getOpCodesHelper(newCs, newUsed, solutions, depth+1)
-
-			//fmt.Printf("%sfound %d solutions\n", indent, len(recursiveSolutions))
-			//
-			//solutions = append(solutions, recursiveSolutions...)
-		}
-	}
-
-	return solutions
-}
-
-func getOpCodes(cs map[int]CandidateSet) []map[int]int {
-
-	solutions := make([]map[int]int, 0)
-
-	return getOpCodesHelper(cs, make(map[int]int), solutions, 0)
 }
 
 func checkMappingWithEvidence(mapping map[int]int, evidence []Evidence, ops []Operation) bool {
@@ -521,33 +418,6 @@ func main() {
 
 	lines, error := readLines(filename)
 
-	//	perms := permutations([]int{0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12})
-
-	//fmt.Printf("Number of perms is %d\n", len(perms))
-
-	// TEMP
-
-	// c1 := map[int]bool{1: true, 2: true, 3: true}
-	// c2 := map[int]bool{1: true, 2: true}
-	// c3 := map[int]bool{3: true}
-
-	// cs := make(map[int]CandidateSet)
-	// cs[9] = c1
-	// cs[10] = c2
-	// cs[11] = c3
-
-	// opCodes := getOpCodes(cs)
-
-	// opCodes = opCodes
-	// // for k, v := range opCodes {
-	// // 	fmt.Printf("%v %v\n", k, v)
-	// // }
-	// fmt.Printf("Found %d potential opcode mappings %v\n", len(opCodes), opCodes)
-
-	//	os.Exit(0)
-
-	// END
-
 	// For part 2 create a map (really we want a set but we can use a map
 	// as a set for our purposes)
 
@@ -594,24 +464,6 @@ func main() {
 			replaceKnown(opCandidates, known)
 		}
 		fmt.Printf("known %v\n", known)
-
-		//		opCodeMappings := getOpCodes(opCandidates)
-
-		//		fmt.Printf("Found %d potential opcode mappings\n", len(opCodeMappings))
-
-		// Test each combination with the evidence and see which ones are good
-
-		// for index, mapping := range opCodeMappings {
-		// 	works := checkMappingWithEvidence(mapping, evidence, ops)
-		// 	if works == true {
-		// 		fmt.Printf("\n%v works\n", mapping)
-		// 	}
-		// 	if index%10000 == 0 {
-		// 		fmt.Print(".")
-		// 	}
-		// }
-
-		// fmt.Printf("Instructions %v\n", instructions)
 
 		state := Device{registers: [...]int{0, 0, 0, 0}}
 
