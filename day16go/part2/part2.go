@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -56,7 +57,7 @@ type Evidence struct {
 
 func parseInstructions(lines []string, startLine int) []Instruction {
 
-	instruction := `(\d)+ (\d) (\d) (\d)`
+	instruction := `(\d+) (\d) (\d) (\d)`
 	r1 := regexp.MustCompile(instruction)
 
 	var instructions []Instruction
@@ -95,7 +96,7 @@ func parseEvidence(lines []string) ([]Evidence, int) {
 		}
 
 		var before = `Before: \[(\d), (\d), (\d), (\d)\]`
-		var instruction = `(\d)+ (\d) (\d) (\d)`
+		var instruction = `(\d+) (\d) (\d) (\d)`
 		var after = `After:  \[(\d+), (\d), (\d), (\d)\]`
 
 		r1 := regexp.MustCompile(before)
@@ -286,6 +287,71 @@ func checkMappingWithEvidence(mapping map[int]int, evidence []Evidence, ops []Op
 	return true
 }
 
+func showOpCandidates(opCandidates map[int]CandidateSet) {
+	fmt.Printf("Op candidates %v\n\n", opCandidates)
+
+	keys := make([]int, len(opCandidates))
+
+	i := 0
+	for k, _ := range opCandidates {
+		keys[i] = k
+		i += 1
+	}
+	sort.Ints(keys)
+
+	for k := range keys {
+		fmt.Printf("op %d : ", k)
+		for k, _ := range opCandidates[k] {
+			fmt.Printf("%d ", k)
+		}
+		fmt.Printf("\n")
+	}
+}
+
+func replaceKnown(opCandidates map[int]CandidateSet, known map[int]int) {
+
+	// known is a map of fake opcode to real opcode
+	// here we want to know which real opcodes are known and
+	// remove them from candidate sets
+	// first we need the reverse map of known
+
+	reverseKnown := make(map[int]int)
+
+	for k, v := range known {
+		reverseKnown[v] = k
+	}
+
+	for op, candidates := range opCandidates {
+		newC := make(CandidateSet)
+		for candidate, _ := range candidates {
+			_, found := reverseKnown[candidate]
+			if !found {
+				newC[candidate] = true
+			}
+		}
+		opCandidates[op] = newC
+	}
+}
+
+func allKnown(opCandidates map[int]CandidateSet) bool {
+	for _, candidates := range opCandidates {
+		if len(candidates) > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func findUnknown(opCandidates map[int]CandidateSet, known map[int]int) {
+	for op, v := range opCandidates {
+		if len(v) == 1 {
+			for k := range v {
+				known[op] = k
+			}
+		}
+	}
+}
+
 func main() {
 
 	filename := "input.txt"
@@ -461,22 +527,23 @@ func main() {
 
 	// TEMP
 
-	c1 := map[int]bool{1: true, 2: true, 3: true}
-	c2 := map[int]bool{1: true, 2: true}
-	c3 := map[int]bool{3: true}
+	// c1 := map[int]bool{1: true, 2: true, 3: true}
+	// c2 := map[int]bool{1: true, 2: true}
+	// c3 := map[int]bool{3: true}
 
-	cs := make(map[int]CandidateSet)
-	cs[9] = c1
-	cs[10] = c2
-	cs[11] = c3
+	// cs := make(map[int]CandidateSet)
+	// cs[9] = c1
+	// cs[10] = c2
+	// cs[11] = c3
 
-	opCodes := getOpCodes(cs)
+	// opCodes := getOpCodes(cs)
 
-	opCodes = opCodes
-	// for k, v := range opCodes {
-	// 	fmt.Printf("%v %v\n", k, v)
-	// }
-	fmt.Printf("Found %d potential opcode mappings %v\n", len(opCodes), opCodes)
+	// opCodes = opCodes
+	// // for k, v := range opCodes {
+	// // 	fmt.Printf("%v %v\n", k, v)
+	// // }
+	// fmt.Printf("Found %d potential opcode mappings %v\n", len(opCodes), opCodes)
+
 	//	os.Exit(0)
 
 	// END
@@ -489,15 +556,21 @@ func main() {
 	if error == nil {
 		evidence, next_line := parseEvidence(lines)
 
-		//fmt.Printf("evidence %v\n", evidence)
+		// fmt.Printf("evidence %v\n", evidence)
 
 		instructions := parseInstructions(lines, next_line)
 
-		instructions = instructions
+		instructions = instructions // TODO remove later
 
 		for _, ev := range evidence {
+			// Find all candidate ops for each evidence, returned as a list
+			// of candidate codes for those ops
 			candidates := getCandidates(ev, ops)
 
+			//			fmt.Printf("candidates for ev %d %v\n", i, candidates)
+
+			// We'll maintain a map of the remapped opcodes and the
+			// actual opcodes they represent (indexes into the opcodes array)
 			for _, candidate := range candidates {
 				m, found := opCandidates[ev.instruction.opCode]
 
@@ -509,35 +582,46 @@ func main() {
 			}
 		}
 
-		fmt.Printf("op candidates%v\n", opCandidates)
+		known := make(map[int]int, 20)
 
-		opCodeMappings := getOpCodes(opCandidates)
+		for !allKnown(opCandidates) {
+			//			showOpCandidates(opCandidates)
 
-		fmt.Printf("Found %d potential opcode mappings\n", len(opCodeMappings))
+			findUnknown(opCandidates, known)
+
+			//			fmt.Printf("known %v\n", known)
+
+			replaceKnown(opCandidates, known)
+		}
+		fmt.Printf("known %v\n", known)
+
+		//		opCodeMappings := getOpCodes(opCandidates)
+
+		//		fmt.Printf("Found %d potential opcode mappings\n", len(opCodeMappings))
 
 		// Test each combination with the evidence and see which ones are good
 
-		for index, mapping := range opCodeMappings {
-			works := checkMappingWithEvidence(mapping, evidence, ops)
-			if works == true {
-				fmt.Printf("\n%v works\n", mapping)
-			}
-			if index%10000 == 0 {
-				fmt.Print(".")
-			}
-		}
-
-		//Fmt.Printf("Instructions %v\n", instructions)
-
-		// state := Device{registers: [...]int{0, 0, 0, 0}}
-
-		// for _, instruction := range instructions {
-		// 	op := instruction.opCode
-		// 	op = opCodes[op]
-		// 	state = ops[op].Execute(state, instruction)
+		// for index, mapping := range opCodeMappings {
+		// 	works := checkMappingWithEvidence(mapping, evidence, ops)
+		// 	if works == true {
+		// 		fmt.Printf("\n%v works\n", mapping)
+		// 	}
+		// 	if index%10000 == 0 {
+		// 		fmt.Print(".")
+		// 	}
 		// }
 
-		// fmt.Printf("State %v\n", state)
+		// fmt.Printf("Instructions %v\n", instructions)
+
+		state := Device{registers: [...]int{0, 0, 0, 0}}
+
+		for _, instruction := range instructions {
+			op := instruction.opCode
+			op = known[op]
+			state = ops[op].Execute(state, instruction)
+		}
+
+		fmt.Printf("State %v\n", state)
 
 	} else {
 		fmt.Printf("Error %v\n", error)
