@@ -41,19 +41,44 @@ lines.each_with_index do |line, row|
   end
 end
 
+# Ansi escape codes
+
+$move_up = "\u001b[1A"
+$move_down = "\u001b[1B"
+$move_right = "\u001b[1C"
+$move_left = "\u001b[1D"
+
+$bright_white = "\u001b[37;1m"
+$bright_red = "\u001b[31;1m"
+$bright_green = "\u001b[32;1m"
+$blue = "\u001b[34m"
+$bright_blue = "\u001b[34;1m"
+
+$reset = "\u001b[0m"
+
 # later add units
-def draw_world(walls)
+def draw_world(walls, units)
   walls.each_with_index do |line, row|
     line.each_with_index do |cell, col|
       print walls[row][col]
     end
     print "\n"
   end
+
+  units.each do |unit|
+
+    print $move_up * (walls.length - unit.y)
+    print ($move_right * unit.x)
+
+    print unit.type
+
+    print $move_down * (walls.length - unit.y)
+    print $move_left * (unit.x + 1)
+  end
+  
 end
 
-draw_world(walls)
-
-puts units
+draw_world(walls, units)
 
 # Data
 # 2d grid of walls
