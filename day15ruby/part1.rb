@@ -89,13 +89,13 @@ end
 
 # Returns the nearest target after doing Dijkstra graph traversal
 # to determine shortest path to enemies
-def move_to_target(walls, units, unit)
+def move_to_target(walls, units, unit, debug_draw)
 
   me = units[unit]
   
   height = walls.length
   width = walls[0].length
-
+  
   target_map = copy_world(walls)
 
   # add everyone to the map with enemies as E and friendlies as walls
@@ -106,6 +106,36 @@ def move_to_target(walls, units, unit)
       target_map[unit.y][unit.x] = '#'
     end
   end
+
+  # Don't move if already in range of a target
+  # This is checked in reading order
+
+  target = nil
+
+  row = me.y
+  col = me.x
+  
+  # Up?
+  if row >=1 and target_map[row-1][col] == 'E'
+    target = [[row-1][col]]
+  end
+
+  # Left?
+  if col >=1 and target_map[row][col-1] == 'E'
+    target = [[row][col-1]]
+  end
+
+  # Right?
+  if col < width-1  and target_map[row][col+1] == 'E'
+    target = [[row][col+1]]
+  end
+  
+  # Down?
+  if row < height-1 and target_map[row+1][col] == 'E'
+    target = [[row+1][col]]
+  end
+
+  return unless target.nil?
   
   # for all enemies mark the target attack positions with ?
   (0...height).each do |row|
@@ -139,7 +169,7 @@ def move_to_target(walls, units, unit)
     end
   end
   
-  draw_world(target_map, [])
+  draw_world(target_map, []) if debug_draw
 
   path_map = copy_world(target_map)
   
@@ -193,7 +223,7 @@ def move_to_target(walls, units, unit)
     
   end
 
-  draw_world(path_map, [])
+  draw_world(path_map, []) if debug_draw
   
   # Target locations - Anywhere where the original map has a question nmark
   # and the path map has a number ...
@@ -276,7 +306,7 @@ def move_to_target(walls, units, unit)
     
   end
 
-  draw_world(path_map, [])
+  draw_world(path_map, []) if debug_draw
 
   # now we must choose where to move to, meaning the square around us
   # with smallest path find value... if there more than one sort by reading
@@ -322,9 +352,13 @@ end
 
 draw_world(walls, units)
 
-move_to_target(walls, units, 0)
+(1..4).each do |_|
+  units.each_with_index do |_, index|
+    move_to_target(walls, units, index, false)
+  end
 
-draw_world(walls, units)
+  draw_world(walls, units)
+end
 
 # Data
 # 2d grid of walls
