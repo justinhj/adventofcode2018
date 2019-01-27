@@ -11,12 +11,12 @@ lines = contents.split("\n")
 walls = Array.new(lines.length) { Array.new(lines[0].length) }
 
 class Unit
-  attr_accessor :x,:y,:type,:hp
+  attr_accessor :x,:y,:kind,:hp
   
-  def initialize(x,y,type,hp)
+  def initialize(x,y,kind,hp)
     @x = x
     @y = y
-    @type = type
+    @kind = kind
     @hp = hp
   end
 end
@@ -60,7 +60,11 @@ $reset = "\u001b[0m"
 def draw_world(walls, units)
   walls.each_with_index do |line, row|
     line.each_with_index do |cell, col|
-      print walls[row][col]
+      if walls[row][col].is_a? Numeric
+        print walls[row][col] % 10
+      else
+        print walls[row][col]
+      end
     end
     print "\n"
   end
@@ -78,14 +82,125 @@ def draw_world(walls, units)
   
 end
 
-draw_world(walls, units)
+# Returns the nearest target after doing Dijkstra graph traversal
+# to determin shortest path to enemies
+def find_target(walls, units, unit)
+
+  me = units[unit]
+  
+  height = walls.length
+  width = walls[0].length
+
+  target_map = walls.clone
+
+  # add everyone to the map with enemies as E and friendlies as walls
+  units.each do |unit|
+    if unit.kind != me.kind
+      target_map[unit.y][unit.x] = 'E'
+    else
+      target_map[unit.y][unit.x] = '#'
+    end
+  end
+
+  # for all enemnies mark the target attack positions with ?
+  (0...width).each do |row|
+    (0...height).each do |col|
+      this_unit = target_map[row][col]
+
+      if target_map[row][col] == 'E'
+        # left target
+        if col >=1 and target_map[row][col-1] == '.'
+          target_map[row][col-1] = '?'
+        end
+
+        # right target
+        if col < width-1 and target_map[row][col+1] == '.'
+          target_map[row][col+1] = '?'
+        end
+
+        # above target
+        if row >=1 and target_map[row-1][col] == '.'
+          target_map[row-1][col] = '?'
+        end
+
+        # below target
+        if row < height-1 and target_map[row+1][col] == '.'
+          target_map[row+1][col] = '?'
+        end
+        
+      end
+
+    end
+  end
+  
+  draw_world(target_map, [])
+
+  path_map = target_map.clone
+  
+  # Now iteratively fill out the distances from me
+
+  path_map[me.y][me.x] = 0
+  changes = 0
+
+  loop do
+
+    (0...width).each do |row|
+      (0...height).each do |col|
+        if ['.', '?'].include? path_map[row][col]
+          lowest_value = [1000]
+          # left
+          if col >=1 and path_map[row][col-1].is_a? Numeric
+            lowest_value << path_map[row][col-1]
+          end
+          
+          # right target
+          if col < width-1 and path_map[row][col+1].is_a? Numeric
+            lowest_value << path_map[row][col+1]
+          end
+          
+          # above target
+          if row >=1 and path_map[row-1][col].is_a? Numeric
+            lowest_value << path_map[row-1][col]
+          end
+          
+          # below target
+          if row < height-1 and path_map[row+1][col].is_a? Numeric
+            lowest_value << path_map[row+1][col]
+          end
+          
+          lowest_value = lowest_value.min
+          
+          if lowest_value < 1000
+            path_map[row][col] = lowest_value + 1
+            changes += 1
+          end
+          
+        end
+      end
+    end
+
+    if changes == 0
+      break
+    else
+      changes = 0
+    end
+    
+  end
+
+  draw_world(path_map, [])
+  
+end
+
+# puts units
+
+find_target(walls, units, 4)
 
 # Data
 # 2d grid of walls
 
 
 
-# Unit health (200) and attack power (3), type (G or E) , x and y position
+# Unit health (200) and attack power (3), kind (G or E) , x and y position
 
 # Turn
 #   identify targets
