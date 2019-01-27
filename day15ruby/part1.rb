@@ -56,6 +56,11 @@ $bright_blue = "\u001b[34;1m"
 
 $reset = "\u001b[0m"
 
+# Deep copy a world
+def copy_world(world)
+  world.map(&:dup)
+end
+
 # later add units
 def draw_world(walls, units)
   walls.each_with_index do |line, row|
@@ -74,7 +79,7 @@ def draw_world(walls, units)
     print $move_up * (walls.length - unit.y)
     print ($move_right * unit.x)
 
-    print unit.type
+    print unit.kind
 
     print $move_down * (walls.length - unit.y)
     print $move_left * (unit.x + 1)
@@ -83,15 +88,15 @@ def draw_world(walls, units)
 end
 
 # Returns the nearest target after doing Dijkstra graph traversal
-# to determin shortest path to enemies
-def find_target(walls, units, unit)
+# to determine shortest path to enemies
+def move_to_target(walls, units, unit)
 
   me = units[unit]
   
   height = walls.length
   width = walls[0].length
 
-  target_map = walls.clone
+  target_map = copy_world(walls)
 
   # add everyone to the map with enemies as E and friendlies as walls
   units.each do |unit|
@@ -101,10 +106,11 @@ def find_target(walls, units, unit)
       target_map[unit.y][unit.x] = '#'
     end
   end
+  
+  # for all enemies mark the target attack positions with ?
+  (0...height).each do |row|
+    (0...width).each do |col|
 
-  # for all enemnies mark the target attack positions with ?
-  (0...width).each do |row|
-    (0...height).each do |col|
       this_unit = target_map[row][col]
 
       if target_map[row][col] == 'E'
@@ -135,7 +141,7 @@ def find_target(walls, units, unit)
   
   draw_world(target_map, [])
 
-  path_map = target_map.clone
+  path_map = copy_world(target_map)
   
   # Now iteratively fill out the distances from me
 
@@ -144,8 +150,8 @@ def find_target(walls, units, unit)
 
   loop do
 
-    (0...width).each do |row|
-      (0...height).each do |col|
+    (0...height).each do |row|
+      (0...width).each do |col|
         if ['.', '?'].include? path_map[row][col]
           lowest_value = [1000]
           # left
@@ -189,11 +195,136 @@ def find_target(walls, units, unit)
 
   draw_world(path_map, [])
   
+  # Target locations - Anywhere where the original map has a question nmark
+  # and the path map has a number ...
+  # The targets will be a map of coordinates and cost
+
+  reachable_targets = {}
+  
+  (0...height).each do |row|
+    (0...width).each do |col|
+
+      if target_map[row][col] == '?' and path_map[row][col].is_a? Numeric
+
+        reachable_targets[[row,col]] = path_map[row][col]
+        
+      end
+      
+    end
+  end
+
+  min = reachable_targets.values.min || 0
+  nearest_targets = reachable_targets.filter {|coord,distance| distance == min}
+
+  return if nearest_targets.length == 0
+  
+  # Sort by reading order
+  # Default sorting of arrays will do this for us
+
+  target = nearest_targets.sort.first[0]
+
+  # Sadly we need to now path find again to find the best route to that target
+
+  path_map = copy_world(target_map)
+
+  # This time the target is the centre of the path finding...
+  path_map[target[0]][target[1]] = 0
+  changes = 0
+
+  loop do
+
+    (0...height).each do |row|
+      (0...width).each do |col|
+        if ['.', '?'].include? path_map[row][col]
+          lowest_value = [1000]
+          # left target
+          if col >=1 and path_map[row][col-1].is_a? Numeric
+            lowest_value << path_map[row][col-1]
+          end
+          
+          # right target
+          if col < width-1 and path_map[row][col+1].is_a? Numeric
+            lowest_value << path_map[row][col+1]
+          end
+          
+          # above target
+          if row >=1 and path_map[row-1][col].is_a? Numeric
+            lowest_value << path_map[row-1][col]
+          end
+          
+          # below target
+          if row < height-1 and path_map[row+1][col].is_a? Numeric
+            lowest_value << path_map[row+1][col]
+          end
+          
+          lowest_value = lowest_value.min
+          
+          if lowest_value < 1000
+            path_map[row][col] = lowest_value + 1
+            changes += 1
+          end
+          
+        end
+      end
+    end
+
+    if changes == 0
+      break
+    else
+      changes = 0
+    end
+    
+  end
+
+  draw_world(path_map, [])
+
+  # now we must choose where to move to, meaning the square around us
+  # with smallest path find value... if there more than one sort by reading
+  # order
+
+  moves = {}
+
+  row = me.y
+  col = me.x
+  
+  # Left?
+  if col >=1 and path_map[row][col-1].is_a? Numeric
+    moves[[row,col-1]] = path_map[row][col-1]
+  end
+
+  # Right?
+  if col < width-1  and path_map[row][col+1].is_a? Numeric
+    moves[[row,col+1]] = path_map[row][col+1]
+  end
+
+  # Up?
+  if row >=1 and path_map[row-1][col].is_a? Numeric
+    moves[[row-1,col]] = path_map[row-1][col]
+  end
+  
+  # Down?
+  if row < height-1 and path_map[row+1][col].is_a? Numeric
+    moves[[row+1,col]] = path_map[row+1][col]
+  end
+
+  min = moves.values.min
+  best_moves = moves.filter {|coord,distance| distance == min}
+
+  best_move = best_moves.sort.first[0]
+  
+  # Now we can move
+  me.y = best_move[0]
+  me.x = best_move[1]
+  
 end
 
 # puts units
 
-find_target(walls, units, 4)
+draw_world(walls, units)
+
+move_to_target(walls, units, 0)
+
+draw_world(walls, units)
 
 # Data
 # 2d grid of walls
