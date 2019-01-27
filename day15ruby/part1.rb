@@ -11,12 +11,12 @@ lines = contents.split("\n")
 walls = Array.new(lines.length) { Array.new(lines[0].length) }
 
 class Unit
-  attr_accessor :x,:y,:type,:hp
+  attr_accessor :x,:y,:kind,:hp
   
-  def initialize(x,y,type,hp)
+  def initialize(x,y,kind,hp)
     @x = x
     @y = y
-    @type = type
+    @kind = kind
     @hp = hp
   end
 end
@@ -53,14 +53,61 @@ end
 
 draw_world(walls)
 
-puts units
+# Returns the nearest target after doing Dijkstra graph traversal
+# to determin shortest path to enemies
+def find_target(walls, units, unit)
+
+  me = units[unit]
+  
+  height = walls.length
+  width = walls[0].length
+
+  path_map = walls.clone
+
+  # add everyone to the map with enemies as E and friendlies as walls
+  units.each do |unit|
+    if unit.kind != me.kind
+      path_map[unit.y][unit.x] = 'E'
+    else
+      path_map[unit.y][unit.x] = '#'
+    end
+  end
+
+  # for all enemnies mark the target attack positions with ?
+  (0...width).each do |row|
+    (0...height).each do |col|
+      this_unit = path_map[row][col]
+
+      if path_map[row][col] == 'E'
+        # left target
+        if col >=1 and path_map[row][col-1] == '.'
+          path_map[row][col-1] = '?'
+        end
+
+        # right target
+        if col < width-1 and path_map[row][col+1] == '.'
+          path_map[row][col+1] = '?'
+        end
+        
+      end
+
+    end
+  end
+  
+  draw_world(path_map)
+  
+end
+
+# puts units
+
+find_target(walls, units, 4)
 
 # Data
 # 2d grid of walls
 
 
 
-# Unit health (200) and attack power (3), type (G or E) , x and y position
+# Unit health (200) and attack power (3), kind (G or E) , x and y position
 
 # Turn
 #   identify targets
