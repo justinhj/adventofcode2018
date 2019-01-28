@@ -10,6 +10,8 @@ lines = contents.split("\n")
 
 walls = Array.new(lines.length) { Array.new(lines[0].length) }
 
+$attack_power = 3
+
 class Unit
   attr_accessor :x,:y,:kind,:hp
   
@@ -87,55 +89,92 @@ def draw_world(walls, units)
   
 end
 
+# Find the unit at location
+def get_unit_at(units,row,col)
+  units.find{|u| u.y == row and u.x == col} 
+end
+
 # Returns the nearest target after doing Dijkstra graph traversal
 # to determine shortest path to enemies
-def move_to_target(walls, units, unit, debug_draw)
+# We'll return a map of what to do and where to do it...
+# :attack coord
+# :move coord
+def determine_action(walls, units, unit, debug_draw, attack_only)
 
   me = units[unit]
+
+  return {} unless me.hp > 0
   
   height = walls.length
   width = walls[0].length
   
   target_map = copy_world(walls)
 
+  target_count = 0
+  
   # add everyone to the map with enemies as E and friendlies as walls
+  # excluding those with no hitpoints
   units.each do |unit|
+    next if unit.hp <= 0 
+    
     if unit.kind != me.kind
       target_map[unit.y][unit.x] = 'E'
+      target_count += 1
     else
       target_map[unit.y][unit.x] = '#'
     end
   end
 
+  return {end: true} if target_count == 0
+  
   # Don't move if already in range of a target
-  # This is checked in reading order
+  # We need the targets ordered by hitpoints then reading
+  # order
 
-  target = nil
+  targets = []
 
   row = me.y
   col = me.x
-  
-  # Up?
+
+  # classify the targets into a coordinate array, hit point count and reading order
   if row >=1 and target_map[row-1][col] == 'E'
-    target = [[row-1][col]]
-  end
-
-  # Left?
-  if col >=1 and target_map[row][col-1] == 'E'
-    target = [[row][col-1]]
-  end
-
-  # Right?
-  if col < width-1  and target_map[row][col+1] == 'E'
-    target = [[row][col+1]]
+    # Up
+    unit = get_unit_at(units,row-1,col)
+    targets << [[row-1,col],unit.hp,0]
   end
   
-  # Down?
+  if col >=1 and target_map[row][col-1] == 'E'
+    # Left
+    unit = get_unit_at(units,row,col-1)
+    targets << [[row,col-1],unit.hp,1]
+  end
+  
+  if col < width-1  and target_map[row][col+1] == 'E'
+    # Right
+    unit = get_unit_at(units,row,col+1)
+    targets << [[row,col+1],unit.hp,2]
+  end
+  
   if row < height-1 and target_map[row+1][col] == 'E'
-    target = [[row+1][col]]
+    # Down
+    unit = get_unit_at(units,row+1,col)
+    targets << [[row+1,col],unit.hp,3]
   end
 
-  return unless target.nil?
+  unless targets.empty?
+    min_hp = targets.map{|n| n[1]}.min
+
+    targets = targets.filter{|n| n[1] == min_hp}
+
+    targets = targets.sort_by{|n| n[2]}
+
+    target = targets.first[0]
+    target_unit = get_unit_at(units, target[0], target[1])
+    
+    return {attack: target_unit}
+  end
+
+  return {} if attack_only
   
   # for all enemies mark the target attack positions with ?
   (0...height).each do |row|
@@ -246,7 +285,8 @@ def move_to_target(walls, units, unit, debug_draw)
   min = reachable_targets.values.min || 0
   nearest_targets = reachable_targets.filter {|coord,distance| distance == min}
 
-  return if nearest_targets.length == 0
+  # No reachable target, return no action
+  return {} if nearest_targets.length == 0
   
   # Sort by reading order
   # Default sorting of arrays will do this for us
@@ -342,9 +382,7 @@ def move_to_target(walls, units, unit, debug_draw)
 
   best_move = best_moves.sort.first[0]
   
-  # Now we can move
-  me.y = best_move[0]
-  me.x = best_move[1]
+  {move: [best_move[0], best_move[1]]}
   
 end
 
@@ -352,40 +390,72 @@ end
 
 draw_world(walls, units)
 
-(1..4).each do |_|
-  units.each_with_index do |_, index|
-    move_to_target(walls, units, index, false)
+turn = 1
+
+loop do
+
+  print "Turn #{turn}\n"
+  
+  # Sort the units into reading order
+  units = units.sort_by{|u| [u.y,u.x]}
+
+  units.each_with_index do |unit, index|
+
+    printf "unit at #{unit.y},#{unit.x} #{unit.kind} #{unit.hp}\n"
+
+    unit_turn = 1
+    
+    loop do
+      if unit_turn == 1
+        action = determine_action(walls, units, index, false, false)
+      else
+        action = determine_action(walls, units, index, false, true)
+      end
+      
+      if action[:end]
+        printf("Combat complete at turn #{turn}\n")
+        remaining_hp = units.inject(0) do |acc,u|
+          if u.hp > 0
+            acc + u.hp
+          else
+            acc
+          end
+        end
+        printf("#{remaining_hp} hp remain\n")
+        
+        units.each do |u|
+          printf "unit #{u.kind} #{u.hp}\n"
+        end
+        
+        exit
+      elsif action[:move]
+        move = action[:move]
+        me = units[index]
+        me.y = move[0]
+        me.x = move[1]
+      elsif action[:attack]
+        attack = action[:attack]
+      printf "unit at #{unit.y},#{unit.x} attack! new hp = #{attack.hp - $attack_power}\n"
+      attack.hp -= $attack_power
+      end
+
+      unit_turn += 1
+      if unit_turn == 3
+        break
+      end
+    end
   end
 
-  draw_world(walls, units)
+  # Remove dead units
+  units = units.filter{|u| u.hp > 0}
+  
+#  draw_world(walls, units)
+
+  printf "after turn #{turn}\n"
+  
+  units.each do |u|
+    printf "unit at #{u.y},#{u.x} #{u.kind} #{u.hp}\n"
+  end
+
+  turn += 1
 end
-
-# Data
-# 2d grid of walls
-
-
-
-# Unit health (200) and attack power (3), kind (G or E) , x and y position
-
-# Turn
-#   identify targets
-#   if none, end of turn
-#   if immediate target up down left or right, that's your target
-#   (don't forget to  this in reading order)
-#   otherwise need to move towards a target
-#   calculate nearest in terms of moves (manhattan distance)
-#   reading order for ties in distance
-#   HP loweest is attacked 
-
-
-# Combat
-# Each unit not dead
-#   resolve all actions
-# Decide who does what based on row then column
-#   try to move in range
-#   attack
-#   if multiple targets priority is top to bottom then left to right
-#    no diagonal attack
-# step 1
-#    identify targets
-
