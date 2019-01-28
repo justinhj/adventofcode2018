@@ -390,7 +390,7 @@ end
 
 draw_world(walls, units)
 
-turn = 1
+turn = 0
 
 loop do
 
@@ -426,6 +426,8 @@ loop do
         units.each do |u|
           printf "unit #{u.kind} #{u.hp}\n"
         end
+
+        printf "answer part1 #{remaining_hp * turn}\n" 
         
         exit
       elsif action[:move]
@@ -435,12 +437,13 @@ loop do
         me.x = move[1]
       elsif action[:attack]
         attack = action[:attack]
-      printf "unit at #{unit.y},#{unit.x} attack! new hp = #{attack.hp - $attack_power}\n"
-      attack.hp -= $attack_power
+        printf "unit at #{unit.y},#{unit.x} attack! new hp = #{attack.hp - $attack_power}\n"
+        attack.hp -= $attack_power
+        unit_turn += 1
       end
-
+      
       unit_turn += 1
-      if unit_turn == 3
+      if unit_turn >= 3
         break
       end
     end
@@ -448,7 +451,7 @@ loop do
 
   # Remove dead units
   units = units.filter{|u| u.hp > 0}
-  
+
 #  draw_world(walls, units)
 
   printf "after turn #{turn}\n"
