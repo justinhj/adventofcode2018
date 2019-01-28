@@ -1,7 +1,10 @@
 require 'pry-byebug'
 require 'io/console'
 
-filename = ARGV.first || __dir__ + '/input.txt'
+filename = ARGV[0]
+$elf_attack_power = ARGV[1].to_i
+
+exit if $elf_attack_power < 4
 
 file = File.open(filename, 'rb')
 contents = file.read
@@ -10,7 +13,7 @@ lines = contents.split("\n")
 
 walls = Array.new(lines.length) { Array.new(lines[0].length) }
 
-$attack_power = 3
+$goblin_attack_power = 3
 
 class Unit
   attr_accessor :x,:y,:kind,:hp
@@ -388,28 +391,38 @@ end
 
 # puts units
 
-draw_world(walls, units)
+#draw_world(walls, units)
+
+starting_elves = units.inject(0) do |acc,u|
+  if u.kind == 'E'
+    acc + 1
+  else
+    acc
+  end
+end
+
+print "Starting elves #{starting_elves}\n"
 
 turn = 0
 
 loop do
-
+  
   #print "Turn #{turn}\n"
   
   # Sort the units into reading order
   units = units.sort_by{|u| [u.y,u.x]}
-
+  
   units.each_with_index do |unit, index|
-
+    
     #printf "unit at #{unit.y},#{unit.x} #{unit.kind} #{unit.hp}\n"
-
+    
     unit_turn = 1
     
     loop do
       if unit_turn == 1
         action = determine_action(walls, units, index, false, false)
       else
-        action = determine_action(walls, units, index, false, true)
+          action = determine_action(walls, units, index, false, true)
       end
       
       if action[:end]
@@ -427,7 +440,17 @@ loop do
           printf "unit #{u.kind} #{u.hp}\n"
         end
 
-        printf "answer part1 #{remaining_hp * turn}\n" 
+        ending_elves = units.inject(0) do |acc,u|
+          if u.kind == 'E'
+            acc + 1
+          else
+            acc
+          end
+        end
+        
+        print "Ending elves #{ending_elves}\n"
+
+        printf "answer part2 #{remaining_hp * turn}\n" 
         
         exit
       elsif action[:move]
@@ -436,29 +459,25 @@ loop do
         me.y = move[0]
         me.x = move[1]
       elsif action[:attack]
-        attack = action[:attack]
+        attacked_unit = action[:attack]
         #printf "unit at #{unit.y},#{unit.x} attack! new hp = #{attack.hp - $attack_power}\n"
-        attack.hp -= $attack_power
+        if attacked_unit.kind == 'G'
+          attacked_unit.hp -= $elf_attack_power
+        else
+          attacked_unit.hp -= $goblin_attack_power
+        end
         unit_turn += 1
       end
-      
+        
       unit_turn += 1
       if unit_turn >= 3
         break
       end
     end
   end
-
+  
   # Remove dead units
   units = units.filter{|u| u.hp > 0}
-
-#  draw_world(walls, units)
-
-  #printf "after turn #{turn}\n"
   
-  # units.each do |u|
-  #   printf "unit at #{u.y},#{u.x} #{u.kind} #{u.hp}\n"
-  # end
-
   turn += 1
 end
