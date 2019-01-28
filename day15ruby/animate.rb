@@ -1,13 +1,10 @@
 require 'pry-byebug'
 require 'io/console'
 
-# Pass in the filename and elf attack power and do a binary
-# search at the terminal to find the answer is 25
+# Animate the solution to Day 15
+# Some of this code is pretty gross BTW lol
 
-filename = ARGV[0]
-$elf_attack_power = ARGV[1].to_i
-
-exit if $elf_attack_power < 4
+filename = ARGV.first || __dir__ + '/input.txt'
 
 file = File.open(filename, 'rb')
 contents = file.read
@@ -16,7 +13,7 @@ lines = contents.split("\n")
 
 walls = Array.new(lines.length) { Array.new(lines[0].length) }
 
-$goblin_attack_power = 3
+$attack_power = 3
 
 class Unit
   attr_accessor :x,:y,:kind,:hp
@@ -92,6 +89,8 @@ def draw_world(walls, units)
     print $move_down * (walls.length - unit.y)
     print $move_left * (unit.x + 1)
   end
+
+  print $move_up * walls.length
   
 end
 
@@ -394,41 +393,36 @@ end
 
 # puts units
 
-#draw_world(walls, units)
-
-starting_elves = units.inject(0) do |acc,u|
-  if u.kind == 'E'
-    acc + 1
-  else
-    acc
-  end
-end
-
-print "Starting elves #{starting_elves}\n"
+draw_world(walls, units)
 
 turn = 0
 
 loop do
-  
+
   #print "Turn #{turn}\n"
+
+  draw_world(walls, units)
   
   # Sort the units into reading order
   units = units.sort_by{|u| [u.y,u.x]}
-  
+
   units.each_with_index do |unit, index|
-    
+
     #printf "unit at #{unit.y},#{unit.x} #{unit.kind} #{unit.hp}\n"
-    
+
     unit_turn = 1
     
     loop do
       if unit_turn == 1
         action = determine_action(walls, units, index, false, false)
       else
-          action = determine_action(walls, units, index, false, true)
+        action = determine_action(walls, units, index, false, true)
       end
       
       if action[:end]
+
+        print $move_down * walls.length
+        
         printf("Combat complete at turn #{turn}\n")
         remaining_hp = units.inject(0) do |acc,u|
           if u.hp > 0
@@ -443,17 +437,7 @@ loop do
           printf "unit #{u.kind} #{u.hp}\n"
         end
 
-        ending_elves = units.inject(0) do |acc,u|
-          if u.kind == 'E'
-            acc + 1
-          else
-            acc
-          end
-        end
-        
-        print "Ending elves #{ending_elves}\n"
-
-        printf "answer part2 #{remaining_hp * turn}\n" 
+        printf "answer part1 #{remaining_hp * turn}\n" 
         
         exit
       elsif action[:move]
@@ -462,25 +446,21 @@ loop do
         me.y = move[0]
         me.x = move[1]
       elsif action[:attack]
-        attacked_unit = action[:attack]
+        attack = action[:attack]
         #printf "unit at #{unit.y},#{unit.x} attack! new hp = #{attack.hp - $attack_power}\n"
-        if attacked_unit.kind == 'G'
-          attacked_unit.hp -= $elf_attack_power
-        else
-          attacked_unit.hp -= $goblin_attack_power
-        end
+        attack.hp -= $attack_power
         unit_turn += 1
       end
-        
+      
       unit_turn += 1
       if unit_turn >= 3
         break
       end
     end
   end
-  
+
   # Remove dead units
   units = units.filter{|u| u.hp > 0}
-  
+
   turn += 1
 end
