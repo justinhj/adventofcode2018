@@ -10,11 +10,11 @@ import (
 )
 
 type Device struct {
-	registers [6]int
+	registers [4]int
 }
 
 type Instruction struct {
-	opCode int
+	opCode string
 	a      int
 	b      int
 	c      int
@@ -26,89 +26,47 @@ type Operation struct {
 	Execute func(d Device, i Instruction) Device
 }
 
-// Represents a state change we can use
-// to determine what the opcode does
-type Evidence struct {
-	before      Device
-	after       Device
-	instruction Instruction
-}
+func parseInput(lines []string) (int, []Instruction) {
 
-// Returns a slice of evidence and the remaining lines
-func parseEvidence(lines []string, start int) ([]Evidence, int) {
+	ipRegex := regexp.MustCompile(`#ip (\d+)`)
+	match := ipRegex.FindStringSubmatch(lines[0])
 
-	ev := []Evidence{}
-
-	for {
-		if lines[start] == "" {
-			return ev, start
-		}
-
-		var before = `Before: \[(\d), (\d), (\d), (\d)\]`
-		var instruction = `(\d)+ (\d) (\d) (\d)`
-		var after = `After:  \[(\d+), (\d), (\d), (\d)\]`
-
-		r1 := regexp.MustCompile(before)
-		r2 := regexp.MustCompile(instruction)
-		r3 := regexp.MustCompile(after)
-
-		matchBefore := r1.FindStringSubmatch(lines[start])
-		matchInstruction := r2.FindStringSubmatch(lines[start+1])
-		matchAfter := r3.FindStringSubmatch(lines[start+2])
-
-		if matchBefore == nil || matchInstruction == nil || matchAfter == nil {
-			return ev, start
-		}
-
-		reg1, e1 := strconv.Atoi(matchBefore[1])
-		reg2, e2 := strconv.Atoi(matchBefore[2])
-		reg3, e3 := strconv.Atoi(matchBefore[3])
-		reg4, e4 := strconv.Atoi(matchBefore[4])
-
-		if e1 != nil || e2 != nil || e3 != nil || e4 != nil {
-			return ev, start
-		}
-
-		beforeDevice := Device{registers: [...]int{reg1, reg2, reg3, reg4}}
-
-		reg1, e1 = strconv.Atoi(matchAfter[1])
-		reg2, e2 = strconv.Atoi(matchAfter[2])
-		reg3, e3 = strconv.Atoi(matchAfter[3])
-		reg4, e4 = strconv.Atoi(matchAfter[4])
-
-		if e1 != nil || e2 != nil || e3 != nil || e4 != nil {
-			return ev, start
-		}
-
-		afterDevice := Device{registers: [...]int{reg1, reg2, reg3, reg4}}
-
-		op, e1 := strconv.Atoi(matchInstruction[1])
-		a, e2 := strconv.Atoi(matchInstruction[2])
-		b, e3 := strconv.Atoi(matchInstruction[3])
-		c, e4 := strconv.Atoi(matchInstruction[4])
-
-		if e1 != nil || e2 != nil || e3 != nil || e4 != nil {
-			return ev, start
-		}
-
-		thisInstruction := Instruction{op, a, b, c}
-
-		ev = append(ev, Evidence{beforeDevice, afterDevice, thisInstruction})
-
-		start += 4
+	if match == nil {
+		return 0, []Instruction{}
 	}
-	return ev, start
-}
 
-func countCandidates(ev Evidence, ops []Operation) int {
-	count := 0
-	for _, op := range ops {
-		result := op.Execute(ev.before, ev.instruction)
-		if result == ev.after {
-			count += 1
+	ip, _ := strconv.Atoi(match[1])
+
+	l := len(lines)
+
+	ins := []Instruction{}
+
+	instructionRegex := regexp.MustCompile(`([a-z]{4}) (\d+) (\d+) (\d+)`)
+
+	line := 1
+	for line < l {
+
+		match = instructionRegex.FindStringSubmatch(lines[line])
+
+		if match == nil {
+			return 0, []Instruction{}
 		}
+
+		opCode := match[1]
+		a, e1 := strconv.Atoi(match[2])
+		b, e2 := strconv.Atoi(match[3])
+		c, e3 := strconv.Atoi(match[4])
+
+		if e1 != nil || e2 != nil || e3 != nil {
+			return 0, []Instruction{}
+		}
+
+		ins = append(ins, Instruction{opCode, a, b, c})
+
+		line += 1
 	}
-	return count
+
+	return ip, ins
 }
 
 func readLines(path string) ([]string, error) {
@@ -293,23 +251,17 @@ func main() {
 		},
 	}
 
+	ops = ops
+
 	lines, error := readLines(filename)
 
 	if error == nil {
-		evidence, _ := parseEvidence(lines, 0)
+		ip, instructions := parseInput(lines)
+		fmt.Printf("ip = %d\n", ip)
 
-		answer := 0
-		for _, ev := range evidence {
-			count := countCandidates(ev, ops)
-			fmt.Printf("%d\n", count)
-			if count >= 3 {
-				answer += 1
-			}
+		for _, ins := range instructions {
+			fmt.Printf("%s\n", ins.opCode)
 		}
 
-		fmt.Printf("Answer %d\n", answer)
-	} else {
-		fmt.Printf("Error %v\n", error)
 	}
-
 }
