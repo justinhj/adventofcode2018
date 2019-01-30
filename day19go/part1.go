@@ -21,8 +21,6 @@ type Instruction struct {
 }
 
 type Operation struct {
-	opCode  int
-	name    string
 	Execute func(d Device, i Instruction) Device
 }
 
@@ -91,9 +89,8 @@ func main() {
 		filename = os.Args[1]
 	}
 
-	ops := []Operation{
-		Operation{opCode: -1,
-			name: "addr",
+	ops := map[string]Operation{
+		"addr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				b := d.registers[i.b]
@@ -101,16 +98,14 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "addi",
+		"addi": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				d.registers[i.c] = a + i.b
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "mulr",
+		"mulr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				b := d.registers[i.b]
@@ -118,16 +113,14 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "muli",
+		"muli": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				d.registers[i.c] = a * i.b
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "banr",
+		"banr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				b := d.registers[i.b]
@@ -135,16 +128,14 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "bani",
+		"bani": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				d.registers[i.c] = a & i.b
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "borr",
+		"borr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				b := d.registers[i.b]
@@ -152,31 +143,27 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "bori",
+		"bori": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				d.registers[i.c] = a | i.b
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "setr",
+		"setr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				d.registers[i.c] = a
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "seti",
+		"seti": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				d.registers[i.c] = i.a
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "gtir",
+		"gtir": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				b := d.registers[i.b]
 				if i.a > b {
@@ -187,8 +174,7 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "gtri",
+		"gtri": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				if a > i.b {
@@ -199,8 +185,7 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "gtrr",
+		"gtrr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				b := d.registers[i.b]
@@ -212,8 +197,7 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "eqir",
+		"eqir": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				b := d.registers[i.b]
 				if i.a == b {
@@ -224,8 +208,7 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "eqri",
+		"eqri": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				if a == i.b {
@@ -236,8 +219,7 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "eqrr",
+		"eqrr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				b := d.registers[i.b]
