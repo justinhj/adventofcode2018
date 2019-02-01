@@ -1,4 +1,4 @@
-// -*- mode: Go; compile-command:"go build part1.go" -*-
+// -*- mode: Go; compile-command:"go build part2.go" -*-
 package main
 
 import (
@@ -247,7 +247,7 @@ func main() {
 			fmt.Printf("%s %d %d %d\n", ins.opCode, ins.a, ins.b, ins.c)
 		}
 
-		device := Device{ipCur: 0, ipReg: ip, registers: [6]int{}}
+		device := Device{ipCur: 0, ipReg: ip, registers: [6]int{1, 0, 0, 0, 0, 0}}
 		fmt.Printf("Initial %v\n", device)
 
 		ipCur := 0
@@ -257,7 +257,7 @@ func main() {
 		iterations := 0
 		for {
 
-			if ipCur < 0 || ipCur >= numInstructions {
+			if ipCur < 0 || ipCur >= numInstructions || iterations > 100000000 {
 				fmt.Printf("Halted with reg 0 = %d after %d iterations\n", device.registers[0], iterations)
 				break
 			}
@@ -266,7 +266,14 @@ func main() {
 			// Set the ip reg to current ip
 			device.registers[ip] = ipCur
 
-			//			fmt.Printf("ip=%d %v %v ", ipCur, device.registers, instruction)
+			fmt.Printf("ip=%010d [%010d %010d %010d %010d %010d %010d] %v ", ipCur,
+				device.registers[0],
+				device.registers[1],
+				device.registers[2],
+				device.registers[3],
+				device.registers[4],
+				device.registers[5],
+				instruction)
 
 			op := ops[instruction.opCode]
 
@@ -275,7 +282,12 @@ func main() {
 			// Update ip from reg
 			ipCur = device.registers[ip]
 
-			//			fmt.Printf("%v\n", device.registers)
+			fmt.Printf("%010d %010d %010d %010d %010d %010d\n", device.registers[0],
+				device.registers[1],
+				device.registers[2],
+				device.registers[3],
+				device.registers[4],
+				device.registers[5])
 
 			// And increment
 			ipCur += 1
