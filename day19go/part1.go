@@ -10,7 +10,9 @@ import (
 )
 
 type Device struct {
-	registers [4]int
+	ipCur     int
+	ipReg     int
+	registers [6]int
 }
 
 type Instruction struct {
@@ -242,8 +244,41 @@ func main() {
 		fmt.Printf("ip = %d\n", ip)
 
 		for _, ins := range instructions {
-			fmt.Printf("%s\n", ins.opCode)
+			fmt.Printf("%s %d %d %d\n", ins.opCode, ins.a, ins.b, ins.c)
 		}
 
+		device := Device{ipCur: 0, ipReg: ip, registers: [6]int{}}
+		fmt.Printf("Initial %v\n", device)
+
+		ipCur := 0
+
+		numInstructions := len(instructions)
+
+		for {
+
+			if ipCur < 0 || ipCur >= numInstructions {
+				fmt.Printf("Halted with reg 0 = %d\n", device.registers[0])
+				break
+			}
+
+			instruction := instructions[ipCur]
+			// Set the ip reg to current ip
+			device.registers[ip] = ipCur
+
+			fmt.Printf("ip=%d %v %v ", ipCur, device.registers, instruction)
+
+			op := ops[instruction.opCode]
+
+			device = op.Execute(device, instruction)
+
+			// Update ip from reg
+			ipCur = device.registers[ip]
+
+			fmt.Printf("%v\n", device.registers)
+
+			// And increment
+			ipCur += 1
+
+		}
 	}
 }
