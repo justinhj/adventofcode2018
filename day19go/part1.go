@@ -10,105 +10,63 @@ import (
 )
 
 type Device struct {
+	ipCur     int
+	ipReg     int
 	registers [6]int
 }
 
 type Instruction struct {
-	opCode int
+	opCode string
 	a      int
 	b      int
 	c      int
 }
 
 type Operation struct {
-	opCode  int
-	name    string
 	Execute func(d Device, i Instruction) Device
 }
 
-// Represents a state change we can use
-// to determine what the opcode does
-type Evidence struct {
-	before      Device
-	after       Device
-	instruction Instruction
-}
+func parseInput(lines []string) (int, []Instruction) {
 
-// Returns a slice of evidence and the remaining lines
-func parseEvidence(lines []string, start int) ([]Evidence, int) {
+	ipRegex := regexp.MustCompile(`#ip (\d+)`)
+	match := ipRegex.FindStringSubmatch(lines[0])
 
-	ev := []Evidence{}
-
-	for {
-		if lines[start] == "" {
-			return ev, start
-		}
-
-		var before = `Before: \[(\d), (\d), (\d), (\d)\]`
-		var instruction = `(\d)+ (\d) (\d) (\d)`
-		var after = `After:  \[(\d+), (\d), (\d), (\d)\]`
-
-		r1 := regexp.MustCompile(before)
-		r2 := regexp.MustCompile(instruction)
-		r3 := regexp.MustCompile(after)
-
-		matchBefore := r1.FindStringSubmatch(lines[start])
-		matchInstruction := r2.FindStringSubmatch(lines[start+1])
-		matchAfter := r3.FindStringSubmatch(lines[start+2])
-
-		if matchBefore == nil || matchInstruction == nil || matchAfter == nil {
-			return ev, start
-		}
-
-		reg1, e1 := strconv.Atoi(matchBefore[1])
-		reg2, e2 := strconv.Atoi(matchBefore[2])
-		reg3, e3 := strconv.Atoi(matchBefore[3])
-		reg4, e4 := strconv.Atoi(matchBefore[4])
-
-		if e1 != nil || e2 != nil || e3 != nil || e4 != nil {
-			return ev, start
-		}
-
-		beforeDevice := Device{registers: [...]int{reg1, reg2, reg3, reg4}}
-
-		reg1, e1 = strconv.Atoi(matchAfter[1])
-		reg2, e2 = strconv.Atoi(matchAfter[2])
-		reg3, e3 = strconv.Atoi(matchAfter[3])
-		reg4, e4 = strconv.Atoi(matchAfter[4])
-
-		if e1 != nil || e2 != nil || e3 != nil || e4 != nil {
-			return ev, start
-		}
-
-		afterDevice := Device{registers: [...]int{reg1, reg2, reg3, reg4}}
-
-		op, e1 := strconv.Atoi(matchInstruction[1])
-		a, e2 := strconv.Atoi(matchInstruction[2])
-		b, e3 := strconv.Atoi(matchInstruction[3])
-		c, e4 := strconv.Atoi(matchInstruction[4])
-
-		if e1 != nil || e2 != nil || e3 != nil || e4 != nil {
-			return ev, start
-		}
-
-		thisInstruction := Instruction{op, a, b, c}
-
-		ev = append(ev, Evidence{beforeDevice, afterDevice, thisInstruction})
-
-		start += 4
+	if match == nil {
+		return 0, []Instruction{}
 	}
-	return ev, start
-}
 
-func countCandidates(ev Evidence, ops []Operation) int {
-	count := 0
-	for _, op := range ops {
-		result := op.Execute(ev.before, ev.instruction)
-		if result == ev.after {
-			count += 1
+	ip, _ := strconv.Atoi(match[1])
+
+	l := len(lines)
+
+	ins := []Instruction{}
+
+	instructionRegex := regexp.MustCompile(`([a-z]{4}) (\d+) (\d+) (\d+)`)
+
+	line := 1
+	for line < l {
+
+		match = instructionRegex.FindStringSubmatch(lines[line])
+
+		if match == nil {
+			return 0, []Instruction{}
 		}
+
+		opCode := match[1]
+		a, e1 := strconv.Atoi(match[2])
+		b, e2 := strconv.Atoi(match[3])
+		c, e3 := strconv.Atoi(match[4])
+
+		if e1 != nil || e2 != nil || e3 != nil {
+			return 0, []Instruction{}
+		}
+
+		ins = append(ins, Instruction{opCode, a, b, c})
+
+		line += 1
 	}
-	return count
+
+	return ip, ins
 }
 
 func readLines(path string) ([]string, error) {
@@ -133,9 +91,8 @@ func main() {
 		filename = os.Args[1]
 	}
 
-	ops := []Operation{
-		Operation{opCode: -1,
-			name: "addr",
+	ops := map[string]Operation{
+		"addr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				b := d.registers[i.b]
@@ -143,16 +100,14 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "addi",
+		"addi": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				d.registers[i.c] = a + i.b
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "mulr",
+		"mulr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				b := d.registers[i.b]
@@ -160,16 +115,14 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "muli",
+		"muli": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				d.registers[i.c] = a * i.b
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "banr",
+		"banr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				b := d.registers[i.b]
@@ -177,16 +130,14 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "bani",
+		"bani": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				d.registers[i.c] = a & i.b
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "borr",
+		"borr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				b := d.registers[i.b]
@@ -194,31 +145,27 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "bori",
+		"bori": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				d.registers[i.c] = a | i.b
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "setr",
+		"setr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				d.registers[i.c] = a
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "seti",
+		"seti": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				d.registers[i.c] = i.a
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "gtir",
+		"gtir": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				b := d.registers[i.b]
 				if i.a > b {
@@ -229,8 +176,7 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "gtri",
+		"gtri": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				if a > i.b {
@@ -241,8 +187,7 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "gtrr",
+		"gtrr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				b := d.registers[i.b]
@@ -254,8 +199,7 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "eqir",
+		"eqir": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				b := d.registers[i.b]
 				if i.a == b {
@@ -266,8 +210,7 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "eqri",
+		"eqri": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				if a == i.b {
@@ -278,8 +221,7 @@ func main() {
 				return d
 			},
 		},
-		Operation{opCode: -1,
-			name: "eqrr",
+		"eqrr": Operation{
 			Execute: func(d Device, i Instruction) Device {
 				a := d.registers[i.a]
 				b := d.registers[i.b]
@@ -293,23 +235,52 @@ func main() {
 		},
 	}
 
+	ops = ops
+
 	lines, error := readLines(filename)
 
 	if error == nil {
-		evidence, _ := parseEvidence(lines, 0)
+		ip, instructions := parseInput(lines)
+		fmt.Printf("ip = %d\n", ip)
 
-		answer := 0
-		for _, ev := range evidence {
-			count := countCandidates(ev, ops)
-			fmt.Printf("%d\n", count)
-			if count >= 3 {
-				answer += 1
-			}
+		for _, ins := range instructions {
+			fmt.Printf("%s %d %d %d\n", ins.opCode, ins.a, ins.b, ins.c)
 		}
 
-		fmt.Printf("Answer %d\n", answer)
-	} else {
-		fmt.Printf("Error %v\n", error)
-	}
+		device := Device{ipCur: 0, ipReg: ip, registers: [6]int{}}
+		fmt.Printf("Initial %v\n", device)
 
+		ipCur := 0
+
+		numInstructions := len(instructions)
+
+		iterations := 0
+		for {
+
+			if ipCur < 0 || ipCur >= numInstructions {
+				fmt.Printf("Halted with reg 0 = %d after %d iterations\n", device.registers[0], iterations)
+				break
+			}
+
+			instruction := instructions[ipCur]
+			// Set the ip reg to current ip
+			device.registers[ip] = ipCur
+
+			//			fmt.Printf("ip=%d %v %v ", ipCur, device.registers, instruction)
+
+			op := ops[instruction.opCode]
+
+			device = op.Execute(device, instruction)
+
+			// Update ip from reg
+			ipCur = device.registers[ip]
+
+			//			fmt.Printf("%v\n", device.registers)
+
+			// And increment
+			ipCur += 1
+
+			iterations += 1
+		}
+	}
 }

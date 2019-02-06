@@ -135,21 +135,15 @@ end
 $move_up = "\u001b[1A" * ($HEIGHT + 1 + 1)
 $move_down = "\u001b[1B" * ($HEIGHT + 1 + 1)
 
-draw_yard(yard)
-print $move_up
-k = STDIN.getch
+minute = 0
 
-(1..10).each do |_|
+(1..1000000000).each do |_|
   apply_rules(yard)
-  draw_yard(yard)
+  minute += 1
   value = calculate_value(yard)
-  print "value #{value}\n"
-  print $move_up
-  k = STDIN.getch
 
-  if k == 'q'
-    break
+  if minute % 100 == 0
+    print "value #{value} time #{minute}\n"
   end
-end
 
-print $move_down
+end
