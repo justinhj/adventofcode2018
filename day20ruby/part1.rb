@@ -1,3 +1,4 @@
+# coding: utf-8
 require 'pry-byebug'
 require 'io/console'
 
@@ -115,7 +116,44 @@ expand_map(directions, [0,0], Room.new, rooms)
 
 rooms.each{|k,v| printf "#{k} #{(v.room_count())}\n" }
 
-# Draw the map
+def draw_room(room)
+
+  s = '?'
+  if room[:up] && room[:left] && room[:right] && room[:down]
+   s = '┼' 
+  elsif room[:up] && room[:left] && room[:right] && room[:down].nil?
+    s = '┴'
+  elsif room[:up].nil? && room[:left] && room[:right] && room[:down]
+    s = '┬'
+  elsif room[:up] && room[:left].nil? && room[:right] && room[:down]
+    s = '├'
+  elsif room[:up] && room[:left] && room[:right].nil? && room[:down]
+    s = '┤'
+  elsif room[:up].nil? && room[:left] && room[:right].nil? && room[:down]
+    s = '┐'
+  elsif room[:up] && room[:left].nil?  && room[:right] && room[:down].nil?
+    s = '└'
+  elsif room[:up] && room[:left]  && room[:right].nil? && room[:down].nil?
+    s = '┘'
+  elsif room[:up].nil? && room[:left].nil?  && room[:right] && room[:down]
+    s = '┌'
+  elsif room[:up].nil? && room[:left]  && room[:right] && room[:down].nil?
+    s = '─'
+  elsif room[:up] && room[:left].nil?  && room[:right].nil? && room[:down]
+    s = '│'
+  elsif room[:up]
+    s = '^'
+  elsif room[:down]
+    s = 'v'
+  elsif room[:left]
+    s = '<'
+  elsif room[:right]
+    s = '>'
+  end
+
+  print s
+
+end
 
 def draw_map(rooms)
   min_x = 0
@@ -133,8 +171,44 @@ def draw_map(rooms)
     max_y = [y, max_y].max
   end
 
-  printf "Map extents [#{min_x},#{min_y}] to [#{max_x},#{max_y}]\n"
-  
+  printf "Map extents [#{min_x},#{min_y}] to [#{max_x},#{max_y}]\n\n"
+
+  (min_y..max_y).to_a.reverse.each do |y|
+    (min_x..max_x).to_a.each do |x|
+      room = rooms.key?([x,y])
+      if room
+        draw_room(rooms[[x,y]])
+      else
+        printf ' '
+      end
+    end
+    print "\n"
+  end
+  print "\n"
 end
 
 draw_map(rooms)
+    
+# ┴ ULR
+# ┬ DLR
+# ├ UDR
+# ┤ UDL
+# 
+# udlr
+# u ^
+# d V
+# l <
+# r >
+# 
+# ┐ LD
+# └ UR
+# ┘ UL
+# ┌ DR
+# ─ LR
+# │ UD
+# 
+# ┼ UDLR
+
+
+
+
