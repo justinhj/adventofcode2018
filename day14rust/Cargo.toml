@@ -1,0 +1,9 @@
+[package]
+
+name = "day_14"
+version = "0.0.1"
+authors = [ "Justin Heyes-Jones <justinhj@gmail.com>" ]
+
+[[bin]]
+
+name = "day_14"
