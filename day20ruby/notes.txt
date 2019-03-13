@@ -1,0 +1,20 @@
+^NN(EE|WW|)N$
+
+expand pos map directions
+
+  if direction
+    map expands in that direction and continue
+  else if start disjunction
+    split into each choice watching out for nested disjunctions
+    for each choice
+      expand that choice
+  end
+end
+
+
+expand pos1 NN(EE|WW|)N$ map
+  N N (
+    expand pos2 EE|WW|)N$ map
+       E E |
+       expand pos3 WW|)N$ map
+         
