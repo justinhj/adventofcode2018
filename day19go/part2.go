@@ -235,8 +235,6 @@ func main() {
 		},
 	}
 
-	ops = ops
-
 	lines, error := readLines(filename)
 
 	if error == nil {
@@ -254,6 +252,20 @@ func main() {
 
 		numInstructions := len(instructions)
 
+		// Debugger controls
+
+		breakpoints := make(map[int]bool, false)
+		running := false
+
+		fmt.Printf("Commands:\n")
+		fmt.Printf("---------\n")
+		fmt.Printf("run - Run until any key press\n")
+		fmt.Printf("break enable [n] - Add a breakpoint when instruction pointer is n\n")
+		fmt.Printf("break disable [n] - Remove any breakpoint when instruction pointer is n\n")
+		fmt.Printf("step - Step instruction\n")
+
+		// Main loop
+
 		iterations := 0
 		for {
 
@@ -265,6 +277,13 @@ func main() {
 			instruction := instructions[ipCur]
 			// Set the ip reg to current ip
 			device.registers[ip] = ipCur
+
+			// Show prompt
+			is_breakpoint := breakpoints[ipCur]
+			if !running || is_breakpoint {
+				fmt.Printf("> ")
+
+			}
 
 			fmt.Printf("ip=%010d [%010d %010d %010d %010d %010d %010d] %v ", ipCur,
 				device.registers[0],
