@@ -29,8 +29,6 @@ def insert(root, data)
   root
 end
 
-#binding.pry
-
 while d = sample.shift do
   root = insert(root, d)
 end
@@ -67,3 +65,25 @@ def in_order(root)
 end
 
 in_order(root)
+
+def lr_swap(root)
+  return if root.nil?
+  
+  root.left = lr_swap(root.left)
+  root.right = lr_swap(root.right)
+
+  if root.right.nil? || root.left.nil?
+    root
+  else
+    root = Node.new(root.right, root.left, root.data)
+  end
+end
+
+#binding.pry
+
+swapped = lr_swap(root)
+
+puts 'ass'
+in_order(swapped)
+puts 'ass'
+draw_tree(swapped,0)
