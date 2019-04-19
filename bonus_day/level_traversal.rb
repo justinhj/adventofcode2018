@@ -1,3 +1,5 @@
+# Binary tree and several traversals
+
 require 'pry-byebug'
 
 Node = Struct.new(:left, :right, :data) do
@@ -5,8 +7,8 @@ end
 
 root = nil
 
-# sample = [1,2,5,3,6,4]
-sample = [10,15,20,5,8,12,14]
+sample = [1,2,5,3,6,4]
+# sample = [10,15,20,5,8,12,14]
 
 def insert(root, data)
   if root.nil?
@@ -45,9 +47,7 @@ end
 draw_tree(root, 0)
 
 def level_order(root)
-
   queue = []
-
   queue << root
 
   while n = queue.shift do
@@ -58,3 +58,12 @@ def level_order(root)
 end
 
 level_order(root)
+
+def in_order(root)
+  return if root.nil?
+  in_order(root.left)
+  puts root.data
+  in_order(root.right)
+end
+
+in_order(root)
