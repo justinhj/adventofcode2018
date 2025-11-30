@@ -40,16 +40,16 @@ const Map = struct {
     width: i64,
     height: i64,
 
-    pub fn set(self: *Map, x: i64, y: i64, val: NT) void {
-        if (x >= 0 and x < self.width and y >= 0 and y < self.height) {
-            const idx = (y * self.width) + x;
+    pub fn set(self: *Map, pos: Pos, val: NT) void {
+        if (pos.x >= 0 and pos.x < self.width and pos.y >= 0 and pos.y < self.height) {
+            const idx = (pos.y * self.width) + pos.x;
             self.data[@intCast(idx)] = val;
         }
     }
 
-    pub fn get(self: *Map, x: i64, y: i64) NT {
-        if (x >= 0 and x < self.width and y >= 0 and y < self.height) {
-            const idx = (y * self.width) + x;
+    pub fn get(self: *Map, pos: Pos) NT {
+        if (pos.x >= 0 and pos.x < self.width and pos.y >= 0 and pos.y < self.height) {
+            const idx = (pos.y * self.width) + pos.x;
             return self.data[@intCast(idx)];
         }
         return .Unknown; // Return Unknown if out of bounds
@@ -58,22 +58,25 @@ const Map = struct {
 
 // Update the map until you reach the end of the regex or exceed the initial array size
 // during the traversal.
-// Returns the new regex_idx after processing
-fn traverse(map: *Map, bounds: *Bounds, current_pos: Pos, regex: []const u8, regex_idx: usize) !usize {
-    std.debug.print("pos {d}, {d}\n", .{current_pos.x, current_pos.y});
+// Returns the next position in the regex to continue at.
+fn traverse(map: *Map, bounds: *Bounds, start_pos: Pos, regex: []const u8, regex_idx: usize) !usize {
+    // std.debug.print("pos {d}, {d}\n", .{start_pos.x, start_pos.y});
+    if (regex_idx == regex.len) {
+        return regex_idx;
+    }
     
-    // Update bounds
-    if (current_pos.x < bounds.left) bounds.left = current_pos.x;
-    if (current_pos.x > bounds.right) bounds.right = current_pos.x;
-    if (current_pos.y < bounds.top) bounds.top = current_pos.y;
-    if (current_pos.y > bounds.bottom) bounds.bottom = current_pos.y;
+    map.set(start_pos, .Room);
 
-    map.set(current_pos.x, current_pos.y, .Room);
+    // Update bounds
+    if (start_pos.x < bounds.left) bounds.left = start_pos.x;
+    if (start_pos.x > bounds.right) bounds.right = start_pos.x;
+    if (start_pos.y < bounds.top) bounds.top = start_pos.y;
+    if (start_pos.y > bounds.bottom) bounds.bottom = start_pos.y;
 
     switch (regex[regex_idx]) {
-        '^' => return traverse(map, bounds, current_pos, regex, regex_idx + 1),
-        '$' => return regex_idx,
-        else => return traverse(map, bounds, current_pos, regex, regex_idx + 1),
+        '^' => return traverse(map, bounds, start_pos, regex, regex_idx + 1),
+        '$' => return regex_idx + 1,
+        else => return traverse(map, bounds, start_pos, regex, regex_idx + 1),
     }
 }
 
@@ -122,9 +125,9 @@ pub fn main() !void {
     std.debug.print("start pos {d},{d}\n", .{start.x, start.y});
 
     var bounds: Bounds = .{ .left = middle_x, .right = middle_x, .top = middle_y, .bottom = middle_y };  
+    map.set(start, .Room); 
     const end_idx = try traverse(&map, &bounds, start, file_contents, 0);
     std.debug.print("Finished at regex index {d}\n", .{end_idx});
     std.debug.print("Bounds: left={d}, right={d}, top={d}, bottom={d}\n", .{bounds.left, bounds.right, bounds.top, bounds.bottom});
-
 }
 
