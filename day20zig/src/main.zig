@@ -35,16 +35,46 @@ const NT = enum {
     Door,
 };
 
+const Map = struct {
+    data: []NT,
+    width: i64,
+    height: i64,
+
+    pub fn set(self: *Map, x: i64, y: i64, val: NT) void {
+        if (x >= 0 and x < self.width and y >= 0 and y < self.height) {
+            const idx = (y * self.width) + x;
+            self.data[@intCast(idx)] = val;
+        }
+    }
+
+    pub fn get(self: *Map, x: i64, y: i64) NT {
+        if (x >= 0 and x < self.width and y >= 0 and y < self.height) {
+            const idx = (y * self.width) + x;
+            return self.data[@intCast(idx)];
+        }
+        return .Unknown; // Return Unknown if out of bounds
+    }
+};
+
 // Update the map until you reach the end of the regex or exceed the initial array size
 // during the traversal.
-fn traverse(map_pos: Pos, regex_pos: usize, regex: []const u8, bounds: Bounds) ZigError.OutOfBounds!Bounds {
-    std.debug.print("pos {d}, {d}\n", .{map_pos.x, map_pos.y});
-    switch (regex[regex_pos]) {
-        '^' => traverse(regex_pos + 1, map_pos, regex),
-        '$' => return,
-        else => traverse(regex_pos + 1, map_pos, regex),
+// Returns the new regex_idx after processing
+fn traverse(map: *Map, bounds: *Bounds, current_pos: Pos, regex: []const u8, regex_idx: usize) !usize {
+    std.debug.print("pos {d}, {d}\n", .{current_pos.x, current_pos.y});
+    
+    // Update bounds
+    if (current_pos.x < bounds.left) bounds.left = current_pos.x;
+    if (current_pos.x > bounds.right) bounds.right = current_pos.x;
+    if (current_pos.y < bounds.top) bounds.top = current_pos.y;
+    if (current_pos.y > bounds.bottom) bounds.bottom = current_pos.y;
+
+    map.set(current_pos.x, current_pos.y, .Room);
+
+    switch (regex[regex_idx]) {
+        '^' => return traverse(map, bounds, current_pos, regex, regex_idx + 1),
+        '$' => return regex_idx,
+        else => return traverse(map, bounds, current_pos, regex, regex_idx + 1),
     }
-    return bounds;
 }
 
 pub fn main() !void {
@@ -78,10 +108,12 @@ pub fn main() !void {
     const grid_width = 1000;
     const grid_height = 1000;
 
-    const map = allocator.alloc(NT, grid_width * grid_height) catch return ZigError.OutOfMemory;
-    defer allocator.free(map);
+    const map_data = allocator.alloc(NT, grid_width * grid_height) catch return ZigError.OutOfMemory;
+    defer allocator.free(map_data);
 
-    @memset(map, .Unknown);
+    @memset(map_data, .Unknown);
+
+    var map = Map{ .data = map_data, .width = grid_width, .height = grid_height };
 
     const middle_x = grid_width / 2;
     const middle_y = grid_height / 2;
@@ -89,14 +121,10 @@ pub fn main() !void {
     const start: Pos = .{ .x = middle_x, .y = middle_y };
     std.debug.print("start pos {d},{d}\n", .{start.x, start.y});
 
-    const bounds: Bounds = .{ .left = middle_x, .right = middle_x, .top = middle_y, .bottom = middle_y };  
-    const result = traverse(start, 0, file_contents, bounds);
-    if (result) |b| {
-        std.debug.print("bounds! {d}\n", .{b.left});
-    } else {
-
-        std.debug.print("Out of bounds!");
-    }
+    var bounds: Bounds = .{ .left = middle_x, .right = middle_x, .top = middle_y, .bottom = middle_y };  
+    const end_idx = try traverse(&map, &bounds, start, file_contents, 0);
+    std.debug.print("Finished at regex index {d}\n", .{end_idx});
+    std.debug.print("Bounds: left={d}, right={d}, top={d}, bottom={d}\n", .{bounds.left, bounds.right, bounds.top, bounds.bottom});
 
 }
 
