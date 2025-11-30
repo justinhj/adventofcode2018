@@ -16,6 +16,10 @@ fn getInputFileName(allocator: std.mem.Allocator) ZigError![]const u8 {
     return filename;
 }
 
+const Direction = enum {
+    N, S, E, W, Stay,
+};
+
 const Pos = struct {
     x: i64,
     y: i64,
@@ -39,6 +43,7 @@ const Map = struct {
     data: []NT,
     width: i64,
     height: i64,
+    bounds: Bounds,
 
     pub fn set(self: *Map, pos: Pos, val: NT) void {
         if (pos.x >= 0 and pos.x < self.width and pos.y >= 0 and pos.y < self.height) {
@@ -56,27 +61,48 @@ const Map = struct {
     }
 };
 
-// Update the map until you reach the end of the regex or exceed the initial array size
-// during the traversal.
+// Update the map by first setting the new state based on the new_state and direction you came from.
+// The take the next element from the regex and process it.
 // Returns the next position in the regex to continue at.
-fn traverse(map: *Map, bounds: *Bounds, start_pos: Pos, regex: []const u8, regex_idx: usize) !usize {
-    // std.debug.print("pos {d}, {d}\n", .{start_pos.x, start_pos.y});
+fn traverse(map: *Map, current_pos: Pos, regex: []const u8, regex_idx: usize, new_state: NT, direction: Direction) !usize {
+    // std.debug.print("pos {d}, {d}\n", .{current_pos.x, current_pos.y});
     if (regex_idx == regex.len) {
-        return regex_idx;
+        return regex_idx; // Already processed the regex
+    }
+
+    // move in the direction specified to set the new state
+    var new_pos: Pos = undefined;
+    switch (direction) {
+        .N => new_pos = .{ current_pos.x, current_pos.y - 1 },
+        .S => new_pos = .{ current_pos.x, current_pos.y + 1 },
+        .W => new_pos = .{ current_pos.x - 1, current_pos.y },
+        .E => new_pos = .{ current_pos.x + 1, current_pos.y },
+        .Stay => new_pos = .{ current_pos.x, current_pos.y - 1 },
     }
     
-    map.set(start_pos, .Room);
-
     // Update bounds
-    if (start_pos.x < bounds.left) bounds.left = start_pos.x;
-    if (start_pos.x > bounds.right) bounds.right = start_pos.x;
-    if (start_pos.y < bounds.top) bounds.top = start_pos.y;
-    if (start_pos.y > bounds.bottom) bounds.bottom = start_pos.y;
+    if (new_pos.x < map.bounds.left) map.bounds.left = new_pos.x;
+    if (new_pos.x > map.bounds.right) map.bounds.right = new_pos.x;
+    if (new_pos.y < map.bounds.top) map.bounds.top = new_pos.y;
+    if (new_pos.y > map.bounds.bottom) map.bounds.bottom = new_pos.y;
+
+    // Verify bounds
+    if (new_pos.x < 0 or new_pos.x >= map.width 
+        or new_pos.y < 0 or new_pos.y >= map.height) {
+        const bounds = map.bounds;
+        std.debug.print("Bounds: left={d}, right={d}, top={d}, bottom={d}\n", .{bounds.left, bounds.right, bounds.top, bounds.bottom});
+        return ZigError.OutOfBounds;
+    }
+
+    map.set(new_pos, new_state);
 
     switch (regex[regex_idx]) {
-        '^' => return traverse(map, bounds, start_pos, regex, regex_idx + 1),
+        '^' => return traverse(map, current_pos, regex, regex_idx + 1, .Room, .Stay),
         '$' => return regex_idx + 1,
-        else => return traverse(map, bounds, start_pos, regex, regex_idx + 1),
+        'N' => {
+
+        },
+        else => return traverse(map, current_pos, regex, regex_idx + 1, .Room, .Stay), // TODO error here instead
     }
 }
 
@@ -116,17 +142,16 @@ pub fn main() !void {
 
     @memset(map_data, .Unknown);
 
-    var map = Map{ .data = map_data, .width = grid_width, .height = grid_height };
-
     const middle_x = grid_width / 2;
     const middle_y = grid_height / 2;
+
+    const bounds: Bounds = .{ .left = middle_x, .right = middle_x, .top = middle_y, .bottom = middle_y };
+    var map = Map{ .data = map_data, .width = grid_width, .height = grid_height, .bounds = bounds };
 
     const start: Pos = .{ .x = middle_x, .y = middle_y };
     std.debug.print("start pos {d},{d}\n", .{start.x, start.y});
 
-    var bounds: Bounds = .{ .left = middle_x, .right = middle_x, .top = middle_y, .bottom = middle_y };  
-    map.set(start, .Room); 
-    const end_idx = try traverse(&map, &bounds, start, file_contents, 0);
+    const end_idx = try traverse(&map, start, file_contents, 0, .Room, .Stay);
     std.debug.print("Finished at regex index {d}\n", .{end_idx});
     std.debug.print("Bounds: left={d}, right={d}, top={d}, bottom={d}\n", .{bounds.left, bounds.right, bounds.top, bounds.bottom});
 }
