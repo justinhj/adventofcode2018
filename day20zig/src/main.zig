@@ -5,6 +5,7 @@ const ZigError = error {
     NoFileSupplied,
     OutOfMemory,
     FileNotFound,
+    OutOfBounds,
 };
 
 fn getInputFileName(allocator: std.mem.Allocator) ZigError![]const u8 {
@@ -15,6 +16,18 @@ fn getInputFileName(allocator: std.mem.Allocator) ZigError![]const u8 {
     return filename;
 }
 
+const Pos = struct {
+    x: i64,
+    y: i64,
+};
+
+const Bounds = struct {
+    left: i64,
+    right: i64,
+    top: i64,
+    bottom: i64,
+};
+
 const NT = enum {
     Unknown,
     Wall,
@@ -22,42 +35,16 @@ const NT = enum {
     Door,
 };
 
-// Graph node
-const GN = struct {
-    x: i64,
-    y: i64,
-    node_type: NT,
-
-    n: ?*GN = null,
-    s: ?*GN = null,
-    e: ?*GN = null,
-    w: ?*GN = null,
-
-    pub fn init(allocator: Allocator) ZigError!*GN {
-        const node = allocator.create(GN) catch return ZigError.OutOfMemory;
-        node.* = GN{
-                .x = 0,
-                .y = 0,
-                .node_type = .Room,
-                .n = null,
-                .s = null,
-                .e = null,
-                .w = null,
-            };
-
-        return node;
-    }
-};
-
-// Build the graph recursively advancing the pos through the regex and growing the graph.
-// Note we assume the input is perfect and simply panic if it is not.
-fn bg(pos: usize, node: *GN, regex: []u8) void {
-    std.debug.print("pos {d}\n", .{pos});
-    switch (regex[pos]) {
-        '^' => bg(pos + 1, node, regex),
+// Update the map until you reach the end of the regex or exceed the initial array size
+// during the traversal.
+fn traverse(map_pos: Pos, regex_pos: usize, regex: []const u8, bounds: Bounds) ZigError.OutOfBounds!Bounds {
+    std.debug.print("pos {d}, {d}\n", .{map_pos.x, map_pos.y});
+    switch (regex[regex_pos]) {
+        '^' => traverse(regex_pos + 1, map_pos, regex),
         '$' => return,
-        else => bg(pos + 1, node, regex),
+        else => traverse(regex_pos + 1, map_pos, regex),
     }
+    return bounds;
 }
 
 pub fn main() !void {
@@ -84,9 +71,32 @@ pub fn main() !void {
 
     std.debug.print("Loaded input. {d} bytes.\n", .{file_contents.len});
 
-    // Walk the regex and create a graph of nodes
-    const node = try GN.init(allocator);
-    bg(0, node, file_contents);
+    // TODO would parse here normally but we can simply parse and generate the map
+    // in one go...
+
+    // Create a large grid and we will start in the centre. 
+    const grid_width = 1000;
+    const grid_height = 1000;
+
+    const map = allocator.alloc(NT, grid_width * grid_height) catch return ZigError.OutOfMemory;
+    defer allocator.free(map);
+
+    @memset(map, .Unknown);
+
+    const middle_x = grid_width / 2;
+    const middle_y = grid_height / 2;
+
+    const start: Pos = .{ .x = middle_x, .y = middle_y };
+    std.debug.print("start pos {d},{d}\n", .{start.x, start.y});
+
+    const bounds: Bounds = .{ .left = middle_x, .right = middle_x, .top = middle_y, .bottom = middle_y };  
+    const result = traverse(start, 0, file_contents, bounds);
+    if (result) |b| {
+        std.debug.print("bounds! {d}\n", .{b.left});
+    } else {
+
+        std.debug.print("Out of bounds!");
+    }
 
 }
 
