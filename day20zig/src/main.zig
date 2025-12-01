@@ -117,11 +117,10 @@ fn traverse(map: *Map, current_pos: Pos, regex: []const u8, regex_start: usize, 
     var regex_idx = regex_start;
 
     while (regex_idx < regex.len) {
-        std.debug.print("regex_idx = {d}\n", .{ regex_idx });
         // When not staying we must make a door and then a new room.
         if (new_dir != .Stay) {
             // move in the direction specified to set the new state
-            switch (direction) {
+            switch (new_dir) {
                 .N => new_pos.y -= 1,
                 .S => new_pos.y += 1,
                 .W => new_pos.x -= 1,
@@ -133,12 +132,12 @@ fn traverse(map: *Map, current_pos: Pos, regex: []const u8, regex_start: usize, 
         }
 
         // Now make new room
-        switch (direction) {
+        switch (new_dir) {
             .N => new_pos.y -= 1,
             .S => new_pos.y += 1,
             .W => new_pos.x -= 1,
             .E => new_pos.x += 1,
-            .Stay => continue,
+            .Stay => {},
         }
 
         try map.update_bounds(new_pos);
@@ -146,14 +145,13 @@ fn traverse(map: *Map, current_pos: Pos, regex: []const u8, regex_start: usize, 
 
         switch (regex[regex_idx]) {
             '^' => regex_idx += 1,
-            '$' => regex_idx += 1,
+            '$' => return,
             'N' => { regex_idx += 1; new_dir = .N; },
             'S' => { regex_idx += 1; new_dir = .S; },
             'W' => { regex_idx += 1; new_dir = .W; },
             'E' => { regex_idx += 1; new_dir = .E; },
             else => unreachable, // TODO options
         }
-        std.debug.print("regex_idx = {d}\n", .{ regex_idx });
     }
 }
 
