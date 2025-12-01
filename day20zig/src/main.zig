@@ -90,20 +90,17 @@ const Map = struct {
         const min_map_y = self.bounds.top;
         const max_map_y = self.bounds.bottom;
 
-        // Use a while loop to handle the i64 range cleanly
         var y = min_map_y;
         while (y <= max_map_y) : (y += 1) {
             var x = min_map_x;
             while (x <= max_map_x) : (x += 1) {
 
-                // Retrieve data directly to respect *const Map signature
-                // (Your helper 'get' requires *Map)
                 const tile = self.get(.{ .x = x, .y = y });
                 const char: u8 = switch (tile) {
                     .Room => '.',
-                    .Door => '-', // Per instructions
-                    // Render Unknown/Wall as hashes to visualize the structure clearly
-                    .Wall, .Unknown => '#',
+                    .Door => '-', // Could be more fancy to draw vertical door
+                    .Unknown => '?',
+                    .Wall => '#',
                 };
 
                 std.debug.print("{c}", .{char});
@@ -114,54 +111,50 @@ const Map = struct {
     }
 };
 
-// Update the map by first setting the new state based on the new_state and direction you came from.
-// The take the next element from the regex and process it.
-// Returns the next position in the regex to continue at.
-fn traverse(map: *Map, current_pos: Pos, regex: []const u8, regex_idx: usize, direction: Direction) !usize {
-    if (regex_idx == regex.len) {
-        return regex_idx; // Reached the end
-    }
-
+fn traverse(map: *Map, current_pos: Pos, regex: []const u8, regex_start: usize, direction: Direction) !void {
     var new_pos: Pos = current_pos;
-    // When not staying we must make a door and then a new room.
-    if (direction != .Stay) {
-        // move in the direction specified to set the new state
+    var new_dir: Direction = direction;
+    var regex_idx = regex_start;
+
+    while (regex_idx < regex.len) {
+        std.debug.print("regex_idx = {d}\n", .{ regex_idx });
+        // When not staying we must make a door and then a new room.
+        if (new_dir != .Stay) {
+            // move in the direction specified to set the new state
+            switch (direction) {
+                .N => new_pos.y -= 1,
+                .S => new_pos.y += 1,
+                .W => new_pos.x -= 1,
+                .E => new_pos.x += 1,
+                else => unreachable,
+            }
+            try map.update_bounds(new_pos);
+            map.set(new_pos, .Door);
+        }
+
+        // Now make new room
         switch (direction) {
             .N => new_pos.y -= 1,
             .S => new_pos.y += 1,
             .W => new_pos.x -= 1,
             .E => new_pos.x += 1,
-            .Stay => new_pos = .{ .x = current_pos.x, .y = current_pos.y },
+            .Stay => continue,
         }
+
         try map.update_bounds(new_pos);
-        map.set(new_pos, .Door);
+        map.set(new_pos, .Room);
+
+        switch (regex[regex_idx]) {
+            '^' => regex_idx += 1,
+            '$' => regex_idx += 1,
+            'N' => { regex_idx += 1; new_dir = .N; },
+            'S' => { regex_idx += 1; new_dir = .S; },
+            'W' => { regex_idx += 1; new_dir = .W; },
+            'E' => { regex_idx += 1; new_dir = .E; },
+            else => unreachable, // TODO options
+        }
+        std.debug.print("regex_idx = {d}\n", .{ regex_idx });
     }
-
-    // Now make new room
-
-    switch (direction) {
-        .N => new_pos.y -= 1,
-        .S => new_pos.y += 1,
-        .W => new_pos.x -= 1,
-        .E => new_pos.x += 1,
-        .Stay => new_pos = .{ .x = current_pos.x, .y = current_pos.y },
-    }
-    try map.update_bounds(new_pos);
-    map.set(new_pos, .Room);
-
-    // Now get the next step.
-
-    var continue_idx: usize = undefined;
-    switch (regex[regex_idx]) {
-        '^' => continue_idx = try traverse(map, new_pos, regex, regex_idx + 1, .Stay),
-        '$' => continue_idx = regex_idx + 1,
-        'N' => continue_idx = try traverse(map, new_pos, regex, regex_idx + 1, .N),
-        'S' => continue_idx = try traverse(map, new_pos, regex, regex_idx + 1, .S),
-        'W' => continue_idx = try traverse(map, new_pos, regex, regex_idx + 1, .W),
-        'E' => continue_idx = try traverse(map, new_pos, regex, regex_idx + 1, .E),
-        else => unreachable,
-    }
-    return continue_idx;
 }
 
 pub fn main() !void {
@@ -209,8 +202,7 @@ pub fn main() !void {
     const start: Pos = .{ .x = middle_x, .y = middle_y };
     std.debug.print("start pos {f}\n", .{start});
 
-    const end_idx = try traverse(&map, start, file_contents, 0, .Stay);
-    std.debug.print("Finished at regex index {d}\n", .{end_idx});
+    try traverse(&map, start, file_contents, 0, .Stay);
     std.debug.print("map.bounds: {f}\n", .{map.bounds});
     map.draw_map();
 }
