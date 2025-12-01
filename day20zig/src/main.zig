@@ -1,7 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const ZigError = error {
+const ZigError = error{
     NoFileSupplied,
     OutOfMemory,
     FileNotFound,
@@ -17,12 +17,20 @@ fn getInputFileName(allocator: std.mem.Allocator) ZigError![]const u8 {
 }
 
 const Direction = enum {
-    N, S, E, W, Stay,
+    N,
+    S,
+    E,
+    W,
+    Stay,
 };
 
 const Pos = struct {
     x: i64,
     y: i64,
+
+    pub fn format(self: *const Pos, wr: *std.io.Writer) std.io.Writer.Error!void {
+        try wr.print("{d},{d}", .{ self.x, self.y });
+    }
 };
 
 const Bounds = struct {
@@ -30,6 +38,10 @@ const Bounds = struct {
     right: i64,
     top: i64,
     bottom: i64,
+
+    pub fn format(self: *const Bounds, wr: *std.io.Writer) std.io.Writer.Error!void {
+        try wr.print("{d},{d} => {d},{d}", .{ self.left, self.top, self.right, self.bottom });
+    }
 };
 
 const NT = enum {
@@ -67,8 +79,7 @@ const Map = struct {
         if (pos.y > self.bounds.bottom) self.bounds.bottom = pos.y;
 
         // Verify bounds
-        if (pos.x < 0 or pos.x >= self.width 
-            or pos.y < 0 or pos.y >= self.height) {
+        if (pos.x < 0 or pos.x >= self.width or pos.y < 0 or pos.y >= self.height) {
             return ZigError.OutOfBounds;
         }
     }
@@ -133,10 +144,10 @@ pub fn main() !void {
     const input_file_name = getInputFileName(allocator) catch {
         std.debug.print("Please pass a file path to the input.\n", .{});
         return;
-    }; 
+    };
     std.debug.print("Processing file {s}.\n", .{input_file_name});
 
-    const open_flags = std.fs.File.OpenFlags {.mode = .read_only};
+    const open_flags = std.fs.File.OpenFlags{ .mode = .read_only };
     const file = std.fs.cwd().openFile(input_file_name, open_flags) catch {
         return ZigError.FileNotFound;
     };
@@ -151,7 +162,7 @@ pub fn main() !void {
     // TODO would parse here normally but we can simply parse and generate the map
     // in one go...
 
-    // Create a large grid and we will start in the centre. 
+    // Create a large grid and we will start in the centre.
     const grid_width = 1000;
     const grid_height = 1000;
 
@@ -167,10 +178,9 @@ pub fn main() !void {
     var map = Map{ .data = map_data, .width = grid_width, .height = grid_height, .bounds = bounds };
 
     const start: Pos = .{ .x = middle_x, .y = middle_y };
-    std.debug.print("start pos {d},{d}\n", .{start.x, start.y});
+    std.debug.print("start pos {f}\n", .{ start });
 
     const end_idx = try traverse(&map, start, file_contents, 0, .Stay);
     std.debug.print("Finished at regex index {d}\n", .{end_idx});
-    std.debug.print("map.bounds: left={d}, right={d}, top={d}, bottom={d}\n", .{map.bounds.left, map.bounds.right, map.bounds.top, map.bounds.bottom});
+    std.debug.print("map.bounds: {f}\n", .{ map.bounds });
 }
-
