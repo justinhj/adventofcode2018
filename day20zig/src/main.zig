@@ -98,12 +98,7 @@ const Map = struct {
 
                 // Retrieve data directly to respect *const Map signature
                 // (Your helper 'get' requires *Map)
-                var tile = NT.Unknown;
-                if (x >= 0 and x < self.width and y >= 0 and y < self.height) {
-                    const idx = (y * self.width) + x;
-                    tile = self.data[@intCast(idx)];
-                }
-
+                const tile = self.get(.{ .x = x, .y = y });
                 const char: u8 = switch (tile) {
                     .Room => '.',
                     .Door => '-', // Per instructions
