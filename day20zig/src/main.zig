@@ -59,51 +59,69 @@ const Map = struct {
         }
         return .Unknown; // Return Unknown if out of bounds
     }
+
+    pub fn update_bounds(self: *Map, pos: Pos) ZigError!void {
+        if (pos.x < self.bounds.left) self.bounds.left = pos.x;
+        if (pos.x > self.bounds.right) self.bounds.right = pos.x;
+        if (pos.y < self.bounds.top) self.bounds.top = pos.y;
+        if (pos.y > self.bounds.bottom) self.bounds.bottom = pos.y;
+
+        // Verify bounds
+        if (pos.x < 0 or pos.x >= self.width 
+            or pos.y < 0 or pos.y >= self.height) {
+            return ZigError.OutOfBounds;
+        }
+    }
 };
 
 // Update the map by first setting the new state based on the new_state and direction you came from.
 // The take the next element from the regex and process it.
 // Returns the next position in the regex to continue at.
-fn traverse(map: *Map, current_pos: Pos, regex: []const u8, regex_idx: usize, new_state: NT, direction: Direction) !usize {
-    // std.debug.print("pos {d}, {d}\n", .{current_pos.x, current_pos.y});
+fn traverse(map: *Map, current_pos: Pos, regex: []const u8, regex_idx: usize, direction: Direction) !usize {
     if (regex_idx == regex.len) {
-        return regex_idx; // Already processed the regex
+        return regex_idx; // Reached the end
     }
 
-    // move in the direction specified to set the new state
-    var new_pos: Pos = undefined;
+    var new_pos: Pos = current_pos;
+    // When not staying we must make a door and then a new room.
+    if (direction != .Stay) {
+        // move in the direction specified to set the new state
+        switch (direction) {
+            .N => new_pos.y -= 1,
+            .S => new_pos.y += 1,
+            .W => new_pos.x -= 1,
+            .E => new_pos.x += 1,
+            .Stay => new_pos = .{ .x = current_pos.x, .y = current_pos.y },
+        }
+        try map.update_bounds(new_pos);
+        map.set(new_pos, .Door);
+    }
+
+    // Now make new room
+
     switch (direction) {
-        .N => new_pos = .{ current_pos.x, current_pos.y - 1 },
-        .S => new_pos = .{ current_pos.x, current_pos.y + 1 },
-        .W => new_pos = .{ current_pos.x - 1, current_pos.y },
-        .E => new_pos = .{ current_pos.x + 1, current_pos.y },
-        .Stay => new_pos = .{ current_pos.x, current_pos.y - 1 },
+        .N => new_pos.y -= 1,
+        .S => new_pos.y += 1,
+        .W => new_pos.x -= 1,
+        .E => new_pos.x += 1,
+        .Stay => new_pos = .{ .x = current_pos.x, .y = current_pos.y },
     }
-    
-    // Update bounds
-    if (new_pos.x < map.bounds.left) map.bounds.left = new_pos.x;
-    if (new_pos.x > map.bounds.right) map.bounds.right = new_pos.x;
-    if (new_pos.y < map.bounds.top) map.bounds.top = new_pos.y;
-    if (new_pos.y > map.bounds.bottom) map.bounds.bottom = new_pos.y;
+    try map.update_bounds(new_pos);
+    map.set(new_pos, .Room);
 
-    // Verify bounds
-    if (new_pos.x < 0 or new_pos.x >= map.width 
-        or new_pos.y < 0 or new_pos.y >= map.height) {
-        const bounds = map.bounds;
-        std.debug.print("Bounds: left={d}, right={d}, top={d}, bottom={d}\n", .{bounds.left, bounds.right, bounds.top, bounds.bottom});
-        return ZigError.OutOfBounds;
-    }
+    // Now get the next step.
 
-    map.set(new_pos, new_state);
-
+    var continue_idx: usize = undefined;
     switch (regex[regex_idx]) {
-        '^' => return traverse(map, current_pos, regex, regex_idx + 1, .Room, .Stay),
-        '$' => return regex_idx + 1,
-        'N' => {
-
-        },
-        else => return traverse(map, current_pos, regex, regex_idx + 1, .Room, .Stay), // TODO error here instead
+        '^' => continue_idx = try traverse(map, current_pos, regex, regex_idx + 1, .Stay),
+        '$' => continue_idx = regex_idx + 1,
+        'N' => continue_idx = try traverse(map, current_pos, regex, regex_idx + 1, .N),
+        'S' => continue_idx = try traverse(map, current_pos, regex, regex_idx + 1, .S),
+        'W' => continue_idx = try traverse(map, current_pos, regex, regex_idx + 1, .W),
+        'E' => continue_idx = try traverse(map, current_pos, regex, regex_idx + 1, .E),
+        else => unreachable,
     }
+    return continue_idx;
 }
 
 pub fn main() !void {
@@ -151,8 +169,8 @@ pub fn main() !void {
     const start: Pos = .{ .x = middle_x, .y = middle_y };
     std.debug.print("start pos {d},{d}\n", .{start.x, start.y});
 
-    const end_idx = try traverse(&map, start, file_contents, 0, .Room, .Stay);
+    const end_idx = try traverse(&map, start, file_contents, 0, .Stay);
     std.debug.print("Finished at regex index {d}\n", .{end_idx});
-    std.debug.print("Bounds: left={d}, right={d}, top={d}, bottom={d}\n", .{bounds.left, bounds.right, bounds.top, bounds.bottom});
+    std.debug.print("map.bounds: left={d}, right={d}, top={d}, bottom={d}\n", .{map.bounds.left, map.bounds.right, map.bounds.top, map.bounds.bottom});
 }
 
