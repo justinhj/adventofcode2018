@@ -64,7 +64,7 @@ const Map = struct {
         }
     }
 
-    pub fn get(self: *Map, pos: Pos) NT {
+    pub fn get(self: *const Map, pos: Pos) NT {
         if (pos.x >= 0 and pos.x < self.width and pos.y >= 0 and pos.y < self.height) {
             const idx = (pos.y * self.width) + pos.x;
             return self.data[@intCast(idx)];
@@ -81,6 +81,40 @@ const Map = struct {
         // Verify bounds
         if (pos.x < 0 or pos.x >= self.width or pos.y < 0 or pos.y >= self.height) {
             return ZigError.OutOfBounds;
+        }
+    }
+
+    pub fn draw_map(self: *const Map) void {
+        const min_map_x = self.bounds.left;
+        const max_map_x = self.bounds.right;
+        const min_map_y = self.bounds.top;
+        const max_map_y = self.bounds.bottom;
+
+        // Use a while loop to handle the i64 range cleanly
+        var y = min_map_y;
+        while (y <= max_map_y) : (y += 1) {
+            var x = min_map_x;
+            while (x <= max_map_x) : (x += 1) {
+
+                // Retrieve data directly to respect *const Map signature
+                // (Your helper 'get' requires *Map)
+                var tile = NT.Unknown;
+                if (x >= 0 and x < self.width and y >= 0 and y < self.height) {
+                    const idx = (y * self.width) + x;
+                    tile = self.data[@intCast(idx)];
+                }
+
+                const char: u8 = switch (tile) {
+                    .Room => '.',
+                    .Door => '-', // Per instructions
+                    // Render Unknown/Wall as hashes to visualize the structure clearly
+                    .Wall, .Unknown => '#',
+                };
+
+                std.debug.print("{c}", .{char});
+            }
+            // Newline at the end of the row
+            std.debug.print("\n", .{});
         }
     }
 };
@@ -124,12 +158,12 @@ fn traverse(map: *Map, current_pos: Pos, regex: []const u8, regex_idx: usize, di
 
     var continue_idx: usize = undefined;
     switch (regex[regex_idx]) {
-        '^' => continue_idx = try traverse(map, current_pos, regex, regex_idx + 1, .Stay),
+        '^' => continue_idx = try traverse(map, new_pos, regex, regex_idx + 1, .Stay),
         '$' => continue_idx = regex_idx + 1,
-        'N' => continue_idx = try traverse(map, current_pos, regex, regex_idx + 1, .N),
-        'S' => continue_idx = try traverse(map, current_pos, regex, regex_idx + 1, .S),
-        'W' => continue_idx = try traverse(map, current_pos, regex, regex_idx + 1, .W),
-        'E' => continue_idx = try traverse(map, current_pos, regex, regex_idx + 1, .E),
+        'N' => continue_idx = try traverse(map, new_pos, regex, regex_idx + 1, .N),
+        'S' => continue_idx = try traverse(map, new_pos, regex, regex_idx + 1, .S),
+        'W' => continue_idx = try traverse(map, new_pos, regex, regex_idx + 1, .W),
+        'E' => continue_idx = try traverse(map, new_pos, regex, regex_idx + 1, .E),
         else => unreachable,
     }
     return continue_idx;
@@ -171,16 +205,17 @@ pub fn main() !void {
 
     @memset(map_data, .Unknown);
 
-    const middle_x = grid_width / 2;
-    const middle_y = grid_height / 2;
+    const middle_x = @divTrunc(grid_width, 2);
+    const middle_y = @divTrunc(grid_height, 2);
 
     const bounds: Bounds = .{ .left = middle_x, .right = middle_x, .top = middle_y, .bottom = middle_y };
     var map = Map{ .data = map_data, .width = grid_width, .height = grid_height, .bounds = bounds };
 
     const start: Pos = .{ .x = middle_x, .y = middle_y };
-    std.debug.print("start pos {f}\n", .{ start });
+    std.debug.print("start pos {f}\n", .{start});
 
     const end_idx = try traverse(&map, start, file_contents, 0, .Stay);
     std.debug.print("Finished at regex index {d}\n", .{end_idx});
-    std.debug.print("map.bounds: {f}\n", .{ map.bounds });
+    std.debug.print("map.bounds: {f}\n", .{map.bounds});
+    map.draw_map();
 }
