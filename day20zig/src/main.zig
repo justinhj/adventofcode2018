@@ -115,6 +115,10 @@ const Map = struct {
 const Options = struct {
     starts: ArrayList(usize),
     end: usize,
+
+    pub fn deinit(self: *Options, allocator: Allocator) void {
+        return self.starts.deinit(allocator);
+    }
 };
 
 fn calculate_options(allocator: Allocator, regex: []const u8, regex_start: usize) ZigError!Options {
@@ -265,7 +269,9 @@ pub fn main() !void {
 
 test "calculate options" {
     const test1 = "^ENWWW(NEEE|SSE(EE|N))$";
-    const result = try calculate_options(testing.allocator, test1, 6);
-    try testing.expectEqualSlices(usize, &[_]usize{7, 11}, result.starts.items);
+    var result = try calculate_options(testing.allocator, test1, 6);
+    defer result.deinit(testing.allocator);
+
+    try testing.expectEqualSlices(usize, &[_]usize{7, 12}, result.starts.items);
     try testing.expectEqual(21, result.end);
 }
