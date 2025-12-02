@@ -275,3 +275,21 @@ test "calculate options" {
     try testing.expectEqualSlices(usize, &[_]usize{7, 12}, result.starts.items);
     try testing.expectEqual(21, result.end);
 }
+
+test "calculate options nested" {
+    const test1 = "^ENWWW(NEEE(NN(NEEEE)EE)|SSE|NNN(EEE|WWW)EEE)$";
+    var result = try calculate_options(testing.allocator, test1, 6);
+    defer result.deinit(testing.allocator);
+
+    try testing.expectEqualSlices(usize, &[_]usize{7, 25, 29}, result.starts.items);
+    try testing.expectEqual(44, result.end);
+}
+
+test "calculate options with empty pipe" {
+    const test1 = "^ENW(NEEE|WEEEE|))$";
+    var result = try calculate_options(testing.allocator, test1, 4);
+    defer result.deinit(testing.allocator);
+
+    try testing.expectEqualSlices(usize, &[_]usize{5, 10, 16}, result.starts.items);
+    try testing.expectEqual(16, result.end);
+}
