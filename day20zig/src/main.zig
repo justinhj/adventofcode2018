@@ -118,12 +118,46 @@ const Options = struct {
 };
 
 fn calculate_options(allocator: Allocator, regex: []const u8, regex_start: usize) ZigError!Options {
-    _ = allocator;
-    _ = regex_start;
-    _ = regex;
-    
+    var starts = try ArrayList(usize).initCapacity(allocator, 32);
+    var end_idx: usize = 0;
+    var depth: usize = 0;
+    var i = regex_start;
 
-    return ZigError.OutOfMemory;
+    // The first option starts right after the opening parenthesis
+    try starts.append(allocator, i + 1);
+
+    while (i < regex.len) {
+        const char = regex[i];
+        switch (char) {
+            '(' => {
+                depth += 1;
+            },
+            '|' => {
+                if (depth == 1) {
+                    // This is a branch within the current option group
+                    try starts.append(allocator, i + 1);
+                }
+            },
+            ')' => {
+                depth -= 1;
+                if (depth == 0) {
+                    // This is the closing parenthesis for the current option group
+                    end_idx = i;
+                    break;
+                }
+            },
+            else => {
+                // Regular characters, just advance
+            },
+        }
+        i += 1;
+    }
+
+    if (end_idx == 0) {
+        return ZigError.OutOfBounds; // Should not happen if regex is well-formed
+    }
+
+    return Options{ .starts = starts, .end = end_idx };
 }
 
 fn expand(allocator: Allocator, map: *Map, current_pos: Pos, regex: []const u8, regex_start: usize, last_brace: ?usize) !void {
@@ -232,5 +266,6 @@ pub fn main() !void {
 test "calculate options" {
     const test1 = "^ENWWW(NEEE|SSE(EE|N))$";
     const result = try calculate_options(testing.allocator, test1, 6);
+    try testing.expectEqualSlices(usize, &[_]usize{7, 11}, result.starts.items);
     try testing.expectEqual(21, result.end);
 }
