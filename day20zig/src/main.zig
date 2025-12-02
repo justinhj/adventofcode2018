@@ -127,7 +127,7 @@ fn calculate_options(allocator: Allocator, regex: []const u8, regex_start: usize
     var depth: usize = 0;
     var i = regex_start;
 
-    // The first option starts right after the opening parenthesis
+    // Note that we start looking at the '('
     try starts.append(allocator, i + 1);
 
     while (i < regex.len) {
@@ -138,27 +138,25 @@ fn calculate_options(allocator: Allocator, regex: []const u8, regex_start: usize
             },
             '|' => {
                 if (depth == 1) {
-                    // This is a branch within the current option group
                     try starts.append(allocator, i + 1);
                 }
             },
             ')' => {
                 depth -= 1;
                 if (depth == 0) {
-                    // This is the closing parenthesis for the current option group
                     end_idx = i;
                     break;
                 }
             },
             else => {
-                // Regular characters, just advance
+                // Skip non related characters
             },
         }
         i += 1;
     }
 
     if (end_idx == 0) {
-        return ZigError.OutOfBounds; // Should not happen if regex is well-formed
+        return ZigError.OutOfBounds;
     }
 
     return Options{ .starts = starts, .end = end_idx };
@@ -170,14 +168,15 @@ fn expand(allocator: Allocator, map: *Map, current_pos: Pos, regex: []const u8, 
 
     // temp
     _ = last_brace;
-    _ = allocator;
 
     while (regex_idx < regex.len) {
-        if (regex[regex_idx] == '^') {
+        var command = regex[regex_idx];
+        if (command == '^') { // Skip the start marker
             regex_idx += 1;
+            command = regex[regex_idx];
+        } else if (command == '$') {
+            return;
         }
-
-        const command = regex[regex_idx];
 
         var direction: ?Direction = undefined;
         switch (command) {
@@ -209,6 +208,16 @@ fn expand(allocator: Allocator, map: *Map, current_pos: Pos, regex: []const u8, 
 
             try map.update_bounds(new_pos);
             map.set(new_pos, .Room);
+        } else if (command == '(') { 
+            const options = try calculate_options(allocator, regex, regex_idx);
+            for (options.starts.items) |start| {
+                std.debug.print("start new expand at {d} end {d}\n", .{start, options.end});
+                try expand(allocator, map, new_pos, regex, start, options.end);
+            }
+        }
+        else {
+            std.debug.print("I really should handle {c}\n", .{command});
+
         }
 
         // Get the next command

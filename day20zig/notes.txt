@@ -92,6 +92,34 @@ it should handle nesting and generate and return a list of start poiunts and the
 
 Remove the logic that handles direction as a param.
 
+Handling this one...
+^ENWWW(NEEE|SSE(EE|N))$
+
+what we want...
+main expand ENWWW
+two new expands at 7 and 12, main expand ends
+
+the first new expand from 7 sees ( so it knows it should execute until it sees a | or ) 
+but it also needs to track depth.
+
+what is the difference between (N|W|)S and (N|W)S ???
+it means that the as well as the two options there is also a skip straight to next
+otherwise the main expand effectively ends
+
+tracking depth
+
+in the calculate_options method we do the same thing needed.
+
+at the start of the iteration set depth to 0
+
+count the first by incrementing depth by 1
+
+when you see | if the depth is 1 then you know it's the end of this iteration
+
+when you see ) decrement the depth. if it is 0 then you reached the end
+
+
+
 
 
 
