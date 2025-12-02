@@ -62,5 +62,36 @@ n n n ( w w w | e e e | ) n n n
 
 n n n ( (set depth to 1) set mode to skip until next ) at this depth. if you see |) then continue otherwise stop
 
+Update.
 
-   
+What expand should do?
+
+Current arguments.
+
+fn expand(map: *Map, current_pos: Pos, regex: []const u8, regex_start: usize, direction: Direction) !void
+
+Expand has no return value. It's job is to expand the map. It is not recursive.
+
+It should start by taking the next element from the regex and decide what to do.
+
+1. NSEW it should create a door and a floor in the direction, return an error if the bounds are exceeded.
+2. ^ it can just advance. $ it must stop.
+3. ( it should do the following:
+
+a) with awareness of nesting create an array of the start and endpoints of each section and the last brace
+b) for each start point it should start a new explore with regex_start at that position. it should continue until it hits | and then jump to the last brace and continue from there
+c) care is needed to handle the last section is empty (you immediately see a )) 
+
+Change plan.
+
+Add a new argument for the last brace location (optional)
+It's probably okay to assume that if you hit a | you were supposed to. Can assert that brace location is set.
+
+Write the function that takes the regex position at the (
+it should handle nesting and generate and return a list of start poiunts and the endpoint
+
+Remove the logic that handles direction as a param.
+
+
+
+

@@ -8,7 +8,7 @@ const ZigError = error{
     OutOfBounds,
 };
 
-fn getInputFileName(allocator: std.mem.Allocator) ZigError![]const u8 {
+fn getInputFileNameArg(allocator: std.mem.Allocator) ZigError![]const u8 {
     var it = try std.process.argsWithAllocator(allocator);
     defer it.deinit();
     _ = it.next(); // skip the executable (first arg)
@@ -21,7 +21,6 @@ const Direction = enum {
     S,
     E,
     W,
-    Stay,
 };
 
 const Pos = struct {
@@ -111,47 +110,54 @@ const Map = struct {
     }
 };
 
-fn traverse(map: *Map, current_pos: Pos, regex: []const u8, regex_start: usize, direction: Direction) !void {
+fn expand(map: *Map, current_pos: Pos, regex: []const u8, regex_start: usize, last_brace: ?usize) !void {
     var new_pos: Pos = current_pos;
-    var new_dir: Direction = direction;
     var regex_idx = regex_start;
 
+    // temp
+    _ = last_brace;
+
     while (regex_idx < regex.len) {
-        // When not staying we must make a door and then a new room.
-        if (new_dir != .Stay) {
-            // move in the direction specified to set the new state
+        if (regex[regex_idx] == '^') {
+            regex_idx += 1;
+        }
+
+        const command = regex[regex_idx];
+
+        var direction: ?Direction = undefined;
+        switch (command) {
+            'N' => direction = .N,
+            'S' => direction = .S,
+            'E' => direction = .E,
+            'W' => direction = .W,
+            else => direction = null,
+        }
+
+        if (direction) |new_dir| {
             switch (new_dir) {
                 .N => new_pos.y -= 1,
                 .S => new_pos.y += 1,
                 .W => new_pos.x -= 1,
                 .E => new_pos.x += 1,
-                else => unreachable,
             }
+
             try map.update_bounds(new_pos);
             map.set(new_pos, .Door);
+
+            // Now make new room
+            switch (new_dir) {
+                .N => new_pos.y -= 1,
+                .S => new_pos.y += 1,
+                .W => new_pos.x -= 1,
+                .E => new_pos.x += 1,
+            }
+
+            try map.update_bounds(new_pos);
+            map.set(new_pos, .Room);
         }
 
-        // Now make new room
-        switch (new_dir) {
-            .N => new_pos.y -= 1,
-            .S => new_pos.y += 1,
-            .W => new_pos.x -= 1,
-            .E => new_pos.x += 1,
-            .Stay => {},
-        }
-
-        try map.update_bounds(new_pos);
-        map.set(new_pos, .Room);
-
-        switch (regex[regex_idx]) {
-            '^' => regex_idx += 1,
-            '$' => return,
-            'N' => { regex_idx += 1; new_dir = .N; },
-            'S' => { regex_idx += 1; new_dir = .S; },
-            'W' => { regex_idx += 1; new_dir = .W; },
-            'E' => { regex_idx += 1; new_dir = .E; },
-            else => unreachable, // TODO options
-        }
+        // Get the next command
+        regex_idx += 1;
     }
 }
 
@@ -161,7 +167,7 @@ pub fn main() !void {
     // Note the arena allocator is convenient here because we don't free
     // anything until the end, it simplifies the freeing.
     const allocator = arena.allocator();
-    const input_file_name = getInputFileName(allocator) catch {
+    const input_file_name = getInputFileNameArg(allocator) catch {
         std.debug.print("Please pass a file path to the input.\n", .{});
         return;
     };
@@ -200,7 +206,8 @@ pub fn main() !void {
     const start: Pos = .{ .x = middle_x, .y = middle_y };
     std.debug.print("start pos {f}\n", .{start});
 
-    try traverse(&map, start, file_contents, 0, .Stay);
+    map.set(start, .Room);
+    try expand(&map, start, file_contents, 0, null);
     std.debug.print("map.bounds: {f}\n", .{map.bounds});
     map.draw_map();
 }
