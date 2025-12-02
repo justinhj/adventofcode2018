@@ -1,5 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
+const testing = std.testing;
 
 const ZigError = error{
     NoFileSupplied,
@@ -110,12 +112,27 @@ const Map = struct {
     }
 };
 
-fn expand(map: *Map, current_pos: Pos, regex: []const u8, regex_start: usize, last_brace: ?usize) !void {
+const Options = struct {
+    starts: ArrayList(usize),
+    end: usize,
+};
+
+fn calculate_options(allocator: Allocator, regex: []const u8, regex_start: usize) ZigError!Options {
+    _ = allocator;
+    _ = regex_start;
+    _ = regex;
+    
+
+    return ZigError.OutOfMemory;
+}
+
+fn expand(allocator: Allocator, map: *Map, current_pos: Pos, regex: []const u8, regex_start: usize, last_brace: ?usize) !void {
     var new_pos: Pos = current_pos;
     var regex_idx = regex_start;
 
     // temp
     _ = last_brace;
+    _ = allocator;
 
     while (regex_idx < regex.len) {
         if (regex[regex_idx] == '^') {
@@ -207,7 +224,13 @@ pub fn main() !void {
     std.debug.print("start pos {f}\n", .{start});
 
     map.set(start, .Room);
-    try expand(&map, start, file_contents, 0, null);
+    try expand(allocator, &map, start, file_contents, 0, null);
     std.debug.print("map.bounds: {f}\n", .{map.bounds});
     map.draw_map();
+}
+
+test "calculate options" {
+    const test1 = "^ENWWW(NEEE|SSE(EE|N))$";
+    const result = try calculate_options(testing.allocator, test1, 6);
+    try testing.expectEqual(21, result.end);
 }
