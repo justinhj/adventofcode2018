@@ -256,69 +256,121 @@ fn calculate_options(allocator: Allocator, regex: []const u8, regex_start: usize
     return Options{ .starts = starts, .end = end_idx };
 }
 
-fn expand(allocator: Allocator, map: *Map, current_pos: Pos, regex: []const u8, regex_start: usize, last_brace: ?usize) !void {
-    var new_pos: Pos = current_pos;
-    var regex_idx = regex_start;
+const AutoHashMap = std.AutoHashMap;
 
-    while (regex_idx < regex.len) {
-        var command = regex[regex_idx];
-        if (command == '^') { // Skip the start marker
-            regex_idx += 1;
-            command = regex[regex_idx];
-        } else if (command == '$') {
-            return;
+fn expand(allocator: Allocator, map: *Map, start_pos: Pos, regex: []const u8) !void {
+    // 1. Track all current valid positions (we can be in multiple places at once)
+    var current_positions = AutoHashMap(Pos, void).init(allocator);
+    defer current_positions.deinit();
+    try current_positions.put(start_pos, {});
+
+    // 2. Stack to handle nested groups '(...)'
+    // Each frame remembers where the group started, and accumulates where branches end.
+    const Frame = struct {
+        starts: std.ArrayList(Pos), // Snapshot of positions when '(' was hit
+        ends: std.ArrayList(Pos),   // Accumulator of positions where branches '|' ended
+    };
+
+    var stack = try ArrayList(Frame).initCapacity(allocator, 100);
+    defer {
+        for (stack.items) |*f| {
+            f.starts.deinit(allocator);
+            f.ends.deinit(allocator);
         }
+        stack.deinit(allocator);
+    }
 
-        var direction: ?Direction = undefined;
-        switch (command) {
-            'N' => direction = .N,
-            'S' => direction = .S,
-            'E' => direction = .E,
-            'W' => direction = .W,
-            else => direction = null,
+    var i: usize = 0;
+    while (i < regex.len) : (i += 1) {
+        const char = regex[i];
+
+        switch (char) {
+            '^', '$' => continue,
+            'N', 'S', 'E', 'W' => {
+                // Move ALL current positions in this direction
+                var next_positions = AutoHashMap(Pos, void).init(allocator);
+                // We don't defer deinit here because we swap it into current_positions
+
+                var it = current_positions.keyIterator();
+                while (it.next()) |pos_ptr| {
+                    var pos = pos_ptr.*;
+                    
+                    // Determine direction
+                    var dx: i64 = 0;
+                    var dy: i64 = 0;
+                    switch (char) {
+                        'N' => dy = -1,
+                        'S' => dy = 1,
+                        'E' => dx = 1,
+                        'W' => dx = -1,
+                        else => unreachable,
+                    }
+
+                    // 1. Move to Door
+                    pos.x += dx;
+                    pos.y += dy;
+                    try map.update_bounds(pos);
+                    map.set(pos, .Door);
+
+                    // 2. Move to Room
+                    pos.x += dx;
+                    pos.y += dy;
+                    try map.update_bounds(pos);
+                    map.set(pos, .Room);
+
+                    try next_positions.put(pos, {});
+                }
+                
+                // Swap sets
+                current_positions.deinit();
+                current_positions = next_positions;
+            },
+            '(' => {
+                // Start of a group. Push state.
+                // Save current "starts" so we can reset to them at every '|'
+                var starts_list = try ArrayList(Pos).initCapacity(allocator, 1000);
+                var it = current_positions.keyIterator();
+                while (it.next()) |p| try starts_list.append(allocator, p.*);
+
+                try stack.append(allocator, .{
+                    .starts = starts_list,
+                    .ends = try ArrayList(Pos).initCapacity(allocator, 1000),
+                });
+            },
+            '|' => {
+                // End of a branch option. 
+                // 1. Save where we are now into 'ends' accumulator
+                var frame = &stack.items[stack.items.len - 1];
+                var it = current_positions.keyIterator();
+                while (it.next()) |p| try frame.ends.append(allocator, p.*);
+
+                // 2. Reset current positions to the group 'starts' for the next option
+                current_positions.clearRetainingCapacity();
+                for (frame.starts.items) |p| {
+                    try current_positions.put(p, {});
+                }
+            },
+            ')' => {
+                // End of the group.
+                var frame = &stack.items[stack.items.len - 1];
+
+                // 1. The current path is also a valid endpoint, add it to 'ends'
+                var it = current_positions.keyIterator();
+                while (it.next()) |p| try frame.ends.append(allocator, p.*);
+
+                // 2. Our new current positions are ALL the accumulated endpoints
+                current_positions.clearRetainingCapacity();
+                for (frame.ends.items) |p| {
+                    try current_positions.put(p, {});
+                }
+
+                // 3. Cleanup stack
+                frame.starts.deinit(allocator);
+                frame.ends.deinit(allocator);
+                _ = stack.pop();
+            },
+            else => {},
         }
-
-        if (direction) |new_dir| {
-            switch (new_dir) {
-                .N => new_pos.y -= 1,
-                .S => new_pos.y += 1,
-                .W => new_pos.x -= 1,
-                .E => new_pos.x += 1,
-            }
-
-            try map.update_bounds(new_pos);
-            map.set(new_pos, .Door);
-
-            // Now make new room
-            switch (new_dir) {
-                .N => new_pos.y -= 1,
-                .S => new_pos.y += 1,
-                .W => new_pos.x -= 1,
-                .E => new_pos.x += 1,
-            }
-
-            try map.update_bounds(new_pos);
-            map.set(new_pos, .Room);
-        } else if (command == '(') {
-            const options = try calculate_options(allocator, regex, regex_idx);
-            for (options.starts.items) |start| {
-                std.debug.print("start new expand at {d} end {d}\n", .{ start, options.end });
-                try expand(allocator, map, new_pos, regex, start, options.end);
-            }
-            break;
-        } else if (command == '|') {
-            std.debug.assert(last_brace != null);
-            std.debug.print("jump to {d}\n", .{last_brace.?});
-            regex_idx = last_brace.?;
-        } else if (command == ')') {
-            // nop
-            std.debug.print("handle )\n", .{});
-        } else {
-            std.debug.print("I really should handle {c}\n", .{command});
-        }
-
-        // Get the next command
-        regex_idx += 1;
     }
 }
 
@@ -368,7 +420,7 @@ pub fn main() !void {
     std.debug.print("start pos {f}\n", .{start});
 
     map.set(start, .Room);
-    try expand(allocator, &map, start, file_contents, 0, null);
+    try expand(allocator, &map, start, file_contents);
     std.debug.print("map.bounds: {f}\n", .{map.bounds});
     map.unknown_to_wall();
     map.draw_map();
