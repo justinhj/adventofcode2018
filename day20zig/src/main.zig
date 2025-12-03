@@ -2,6 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const testing = std.testing;
+const AutoHashMap = std.AutoHashMap;
 
 const ZigError = error{
     NoFileSupplied,
@@ -206,58 +207,6 @@ const Map = struct {
     }
 };
 
-const Options = struct {
-    starts: ArrayList(usize),
-    end: usize,
-
-    pub fn deinit(self: *Options, allocator: Allocator) void {
-        return self.starts.deinit(allocator);
-    }
-};
-
-fn calculate_options(allocator: Allocator, regex: []const u8, regex_start: usize) ZigError!Options {
-    var starts = try ArrayList(usize).initCapacity(allocator, 32);
-    var end_idx: usize = 0;
-    var depth: usize = 0;
-    var i = regex_start;
-
-    // Note that we start looking at the '('
-    try starts.append(allocator, i + 1);
-
-    while (i < regex.len) {
-        const char = regex[i];
-        switch (char) {
-            '(' => {
-                depth += 1;
-            },
-            '|' => {
-                if (depth == 1) {
-                    try starts.append(allocator, i + 1);
-                }
-            },
-            ')' => {
-                depth -= 1;
-                if (depth == 0) {
-                    end_idx = i;
-                    break;
-                }
-            },
-            else => {
-                // Skip non related characters
-            },
-        }
-        i += 1;
-    }
-
-    if (end_idx == 0) {
-        return ZigError.OutOfBounds;
-    }
-
-    return Options{ .starts = starts, .end = end_idx };
-}
-
-const AutoHashMap = std.AutoHashMap;
-
 fn expand(allocator: Allocator, map: *Map, start_pos: Pos, regex: []const u8) !void {
     // Track the expanding positions, to start with just the start position
     var current_positions = AutoHashMap(Pos, void).init(allocator);
@@ -422,31 +371,4 @@ pub fn main() !void {
 
     const furthest = try map.dijkstra_max(allocator, start);
     std.debug.print("furthest {d}\n", .{furthest});
-}
-
-test "calculate options" {
-    const test1 = "^ENWWW(NEEE|SSE(EE|N))$";
-    var result = try calculate_options(testing.allocator, test1, 6);
-    defer result.deinit(testing.allocator);
-
-    try testing.expectEqualSlices(usize, &[_]usize{ 7, 12 }, result.starts.items);
-    try testing.expectEqual(21, result.end);
-}
-
-test "calculate options nested" {
-    const test1 = "^ENWWW(NEEE(NN(NEEEE)EE)|SSE|NNN(EEE|WWW)EEE)$";
-    var result = try calculate_options(testing.allocator, test1, 6);
-    defer result.deinit(testing.allocator);
-
-    try testing.expectEqualSlices(usize, &[_]usize{ 7, 25, 29 }, result.starts.items);
-    try testing.expectEqual(44, result.end);
-}
-
-test "calculate options with empty pipe" {
-    const test1 = "^ENW(NEEE|WEEEE|))$";
-    var result = try calculate_options(testing.allocator, test1, 4);
-    defer result.deinit(testing.allocator);
-
-    try testing.expectEqualSlices(usize, &[_]usize{ 5, 10, 16 }, result.starts.items);
-    try testing.expectEqual(16, result.end);
 }
