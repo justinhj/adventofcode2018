@@ -118,8 +118,37 @@ when you see | if the depth is 1 then you know it's the end of this iteration
 
 when you see ) decrement the depth. if it is 0 then you reached the end
 
+what is the equivalent... 
 
+01234567890123456789012
+^ENWWW(NEEE|SSE(EE|N))$
 
+7,12 => 
 
+ENWWW
+  NEEE I see a | and I have a last brace so I jump to it (21)
+  SSE I see ( so I start a new choice 
+     EE 
+     N
 
+16, 19. 20
+       
+  
+#########
+#.|.|.|.#
+#-#######
+#.|.|.|.#
+#-#####-#
+#.#.#X|.#
+#-#-#####
+#.|.|.|.#
+#########
+
+.-.-.-.
+-######
+.-.-.-.
+-#####-
+.#.#.-.
+-#-####
+.-.-.-.
 

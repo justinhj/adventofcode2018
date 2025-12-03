@@ -110,6 +110,24 @@ const Map = struct {
             std.debug.print("\n", .{});
         }
     }
+
+    pub fn unknown_to_wall(self: *Map) void {
+        const min_map_x = self.bounds.left;
+        const max_map_x = self.bounds.right;
+        const min_map_y = self.bounds.top;
+        const max_map_y = self.bounds.bottom;
+
+        var y = min_map_y;
+        while (y <= max_map_y) : (y += 1) {
+            var x = min_map_x;
+            while (x <= max_map_x) : (x += 1) {
+                const tile = self.get(.{ .x = x, .y = y });
+                if (tile == .Unknown) {
+                    self.set(.{ .x = x, .y = y }, .Wall);
+                }
+            }
+        }
+    }
 };
 
 const Options = struct {
@@ -278,6 +296,7 @@ pub fn main() !void {
     map.set(start, .Room);
     try expand(allocator, &map, start, file_contents, 0, null);
     std.debug.print("map.bounds: {f}\n", .{map.bounds});
+    map.unknown_to_wall();
     map.draw_map();
 }
 
