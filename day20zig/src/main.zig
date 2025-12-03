@@ -85,11 +85,11 @@ const Map = struct {
         }
     }
 
-    pub fn draw_map(self: *const Map) void {
-        const min_map_x = self.bounds.left;
-        const max_map_x = self.bounds.right;
-        const min_map_y = self.bounds.top;
-        const max_map_y = self.bounds.bottom;
+pub fn draw_map(self: *const Map) void {
+        const min_map_x = self.bounds.left - 1;
+        const max_map_x = self.bounds.right + 1;
+        const min_map_y = self.bounds.top - 1;
+        const max_map_y = self.bounds.bottom + 1;
 
         var y = min_map_y;
         while (y <= max_map_y) : (y += 1) {
@@ -99,14 +99,12 @@ const Map = struct {
                 const tile = self.get(.{ .x = x, .y = y });
                 const char: u8 = switch (tile) {
                     .Room => '.',
-                    .Door => '-', // Could be more fancy to draw vertical door
-                    .Unknown => '?',
+                    .Door => '-', 
+                    .Unknown => '#', 
                     .Wall => '#',
                 };
-
                 std.debug.print("{c}", .{char});
             }
-            // Newline at the end of the row
             std.debug.print("\n", .{});
         }
     }
