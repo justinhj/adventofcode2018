@@ -85,7 +85,7 @@ const Map = struct {
         }
     }
 
-pub fn draw_map(self: *const Map) void {
+    pub fn draw_map(self: *const Map) void {
         const min_map_x = self.bounds.left - 1;
         const max_map_x = self.bounds.right + 1;
         const min_map_y = self.bounds.top - 1;
@@ -95,18 +95,96 @@ pub fn draw_map(self: *const Map) void {
         while (y <= max_map_y) : (y += 1) {
             var x = min_map_x;
             while (x <= max_map_x) : (x += 1) {
-
                 const tile = self.get(.{ .x = x, .y = y });
                 const char: u8 = switch (tile) {
                     .Room => '.',
-                    .Door => '-', 
-                    .Unknown => '#', 
+                    .Door => '-',
+                    .Unknown => '#',
                     .Wall => '#',
                 };
                 std.debug.print("{c}", .{char});
             }
             std.debug.print("\n", .{});
         }
+    }
+
+    pub fn dijkstra_max(self: *Map, allocator: std.mem.Allocator, start: Pos) !usize {
+        
+        // 1. Structure for Priority Queue
+        const State = struct {
+            pos: Pos,
+            cost: usize,
+        };
+
+        // 2. Comparison function for Min-Heap (Dijkstra)
+        const Compare = struct {
+            fn lessThan(context: void, a: State, b: State) std.math.Order {
+                _ = context;
+                return std.math.order(a.cost, b.cost);
+            }
+        };
+
+        // 3. Initialize Distance Map (keep track of costs + visited)
+        // We use a flat array matching map dimensions for speed.
+        const total_size = @as(usize, @intCast(self.width * self.height));
+        var dist_map = try allocator.alloc(usize, total_size);
+        defer allocator.free(dist_map);
+        
+        // Initialize with max integer (Infinity)
+        @memset(dist_map, std.math.maxInt(usize));
+
+        // 4. Initialize Priority Queue
+        var pq = std.PriorityQueue(State, void, Compare.lessThan).init(allocator, {});
+        defer pq.deinit();
+
+        // 5. Setup Start Node
+        // Calculate index for start position
+        const start_idx = @as(usize, @intCast((start.y * self.width) + start.x));
+        dist_map[start_idx] = 0;
+        try pq.add(.{ .pos = start, .cost = 0 });
+
+        var max_distance: usize = 0;
+
+        // 6. The Loop
+        while (pq.removeOrNull()) |current| {
+            
+            // Optimization: If we found a shorter way to this node already, skip
+            const curr_idx = @as(usize, @intCast((current.pos.y * self.width) + current.pos.x));
+            if (current.cost > dist_map[curr_idx]) continue;
+
+            // Update global max distance if this is a Room
+            // In this problem, we usually only care about distance to Rooms, not Doors
+            if (self.get(current.pos) == .Room) {
+                if (current.cost > max_distance) max_distance = current.cost;
+            }
+
+            // Check Neighbors (N, S, E, W)
+            const neighbors = [_]Pos{
+                .{ .x = current.pos.x, .y = current.pos.y - 1 }, // N
+                .{ .x = current.pos.x, .y = current.pos.y + 1 }, // S
+                .{ .x = current.pos.x + 1, .y = current.pos.y }, // E
+                .{ .x = current.pos.x - 1, .y = current.pos.y }, // W
+            };
+
+            for (neighbors) |n_pos| {
+                const tile = self.get(n_pos);
+
+                // Valid movement: Can walk into Doors or Rooms
+                if (tile == .Door or tile == .Room) {
+                    const new_cost = current.cost + 1;
+                    const n_idx = @as(usize, @intCast((n_pos.y * self.width) + n_pos.x));
+
+                    if (new_cost < dist_map[n_idx]) {
+                        dist_map[n_idx] = new_cost;
+                        try pq.add(.{ .pos = n_pos, .cost = new_cost });
+                    }
+                }
+            }
+        }
+
+        // Return max_distance / 2 because the grid steps are Room -> Door -> Room.
+        // That counts as 2 array steps, but logically it is 1 "door passed".
+        return max_distance / 2;
     }
 
     pub fn unknown_to_wall(self: *Map) void {
@@ -221,10 +299,10 @@ fn expand(allocator: Allocator, map: *Map, current_pos: Pos, regex: []const u8, 
 
             try map.update_bounds(new_pos);
             map.set(new_pos, .Room);
-        } else if (command == '(') { 
+        } else if (command == '(') {
             const options = try calculate_options(allocator, regex, regex_idx);
             for (options.starts.items) |start| {
-                std.debug.print("start new expand at {d} end {d}\n", .{start, options.end});
+                std.debug.print("start new expand at {d} end {d}\n", .{ start, options.end });
                 try expand(allocator, map, new_pos, regex, start, options.end);
             }
             break;
@@ -235,10 +313,8 @@ fn expand(allocator: Allocator, map: *Map, current_pos: Pos, regex: []const u8, 
         } else if (command == ')') {
             // nop
             std.debug.print("handle )\n", .{});
-        }
-        else {
+        } else {
             std.debug.print("I really should handle {c}\n", .{command});
-
         }
 
         // Get the next command
@@ -296,6 +372,9 @@ pub fn main() !void {
     std.debug.print("map.bounds: {f}\n", .{map.bounds});
     map.unknown_to_wall();
     map.draw_map();
+
+    const furthest = try map.dijkstra_max(allocator, start);
+    std.debug.print("furthest {d}\n", .{furthest});
 }
 
 test "calculate options" {
@@ -303,7 +382,7 @@ test "calculate options" {
     var result = try calculate_options(testing.allocator, test1, 6);
     defer result.deinit(testing.allocator);
 
-    try testing.expectEqualSlices(usize, &[_]usize{7, 12}, result.starts.items);
+    try testing.expectEqualSlices(usize, &[_]usize{ 7, 12 }, result.starts.items);
     try testing.expectEqual(21, result.end);
 }
 
@@ -312,7 +391,7 @@ test "calculate options nested" {
     var result = try calculate_options(testing.allocator, test1, 6);
     defer result.deinit(testing.allocator);
 
-    try testing.expectEqualSlices(usize, &[_]usize{7, 25, 29}, result.starts.items);
+    try testing.expectEqualSlices(usize, &[_]usize{ 7, 25, 29 }, result.starts.items);
     try testing.expectEqual(44, result.end);
 }
 
@@ -321,6 +400,6 @@ test "calculate options with empty pipe" {
     var result = try calculate_options(testing.allocator, test1, 4);
     defer result.deinit(testing.allocator);
 
-    try testing.expectEqualSlices(usize, &[_]usize{5, 10, 16}, result.starts.items);
+    try testing.expectEqualSlices(usize, &[_]usize{ 5, 10, 16 }, result.starts.items);
     try testing.expectEqual(16, result.end);
 }
