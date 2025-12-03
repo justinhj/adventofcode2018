@@ -259,13 +259,12 @@ fn calculate_options(allocator: Allocator, regex: []const u8, regex_start: usize
 const AutoHashMap = std.AutoHashMap;
 
 fn expand(allocator: Allocator, map: *Map, start_pos: Pos, regex: []const u8) !void {
-    // 1. Track all current valid positions (we can be in multiple places at once)
+    // Track the expanding positions, to start with just the start position
     var current_positions = AutoHashMap(Pos, void).init(allocator);
     defer current_positions.deinit();
     try current_positions.put(start_pos, {});
 
-    // 2. Stack to handle nested groups '(...)'
-    // Each frame remembers where the group started, and accumulates where branches end.
+    // Each frame remembers where each group started, and accumulates where branches end.
     const Frame = struct {
         starts: std.ArrayList(Pos), // Snapshot of positions when '(' was hit
         ends: std.ArrayList(Pos),   // Accumulator of positions where branches '|' ended
@@ -289,13 +288,12 @@ fn expand(allocator: Allocator, map: *Map, start_pos: Pos, regex: []const u8) !v
             'N', 'S', 'E', 'W' => {
                 // Move ALL current positions in this direction
                 var next_positions = AutoHashMap(Pos, void).init(allocator);
-                // We don't defer deinit here because we swap it into current_positions
+                // don't defer deinit here because we swap it with current_positions later
 
                 var it = current_positions.keyIterator();
                 while (it.next()) |pos_ptr| {
                     var pos = pos_ptr.*;
                     
-                    // Determine direction
                     var dx: i64 = 0;
                     var dy: i64 = 0;
                     switch (char) {
@@ -306,13 +304,11 @@ fn expand(allocator: Allocator, map: *Map, start_pos: Pos, regex: []const u8) !v
                         else => unreachable,
                     }
 
-                    // 1. Move to Door
                     pos.x += dx;
                     pos.y += dy;
                     try map.update_bounds(pos);
                     map.set(pos, .Door);
 
-                    // 2. Move to Room
                     pos.x += dx;
                     pos.y += dy;
                     try map.update_bounds(pos);
@@ -321,7 +317,6 @@ fn expand(allocator: Allocator, map: *Map, start_pos: Pos, regex: []const u8) !v
                     try next_positions.put(pos, {});
                 }
                 
-                // Swap sets
                 current_positions.deinit();
                 current_positions = next_positions;
             },
@@ -402,8 +397,8 @@ pub fn main() !void {
     // in one go...
 
     // Create a large grid and we will start in the centre.
-    const grid_width = 1000;
-    const grid_height = 1000;
+    const grid_width = 250;
+    const grid_height = 250;
 
     const map_data = allocator.alloc(NT, grid_width * grid_height) catch return ZigError.OutOfMemory;
     defer allocator.free(map_data);
