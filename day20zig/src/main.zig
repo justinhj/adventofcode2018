@@ -166,9 +166,6 @@ fn expand(allocator: Allocator, map: *Map, current_pos: Pos, regex: []const u8, 
     var new_pos: Pos = current_pos;
     var regex_idx = regex_start;
 
-    // temp
-    _ = last_brace;
-
     while (regex_idx < regex.len) {
         var command = regex[regex_idx];
         if (command == '^') { // Skip the start marker
@@ -214,6 +211,14 @@ fn expand(allocator: Allocator, map: *Map, current_pos: Pos, regex: []const u8, 
                 std.debug.print("start new expand at {d} end {d}\n", .{start, options.end});
                 try expand(allocator, map, new_pos, regex, start, options.end);
             }
+            break;
+        } else if (command == '|') {
+            std.debug.assert(last_brace != null);
+            std.debug.print("jump to {d}\n", .{last_brace.?});
+            regex_idx = last_brace.?;
+        } else if (command == ')') {
+            // nop
+            std.debug.print("handle )\n", .{});
         }
         else {
             std.debug.print("I really should handle {c}\n", .{command});
